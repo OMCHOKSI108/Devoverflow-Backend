@@ -1,0 +1,12 @@
+# ADD THESE TO YOUR .env FILE FOR CLOUDINARY SUPPORT
+
+# Cloudinary Configuration (for file uploads in production)
+CLOUDINARY_CLOUD_NAME=your_cloud_name_here
+CLOUDINARY_API_KEY=your_api_key_here
+CLOUDINARY_API_SECRET=your_api_secret_here
+
+# Instructions:
+# 1. Go to https://cloudinary.com and create a free account
+# 2. Get your credentials from the dashboard
+# 3. Replace the values above with your actual credentials
+# 4. Set NODE_ENV=production in Render environment variables

@@ -1,0 +1,575 @@
+================================================================================
+                    MOBILE Q&A APP - API ENDPOINTS DOCUMENTATION
+================================================================================
+
+Base URL: http://localhost:3000/api
+Version: 1.0.0
+Date: August 2, 2025
+
+================================================================================
+                                TABLE OF CONTENTS
+================================================================================
+
+1. Authentication Endpoints (/api/auth)
+2. Questions Endpoints (/api/questions)  
+3. Answers Endpoints (/api/answers)
+4. Comments Endpoints (/api/comments)
+5. Users Endpoints (/api/users)
+6. Bookmarks Endpoints (/api/bookmarks)
+7. Admin Endpoints (/api/admin)
+8. AI Features Endpoints (/api/ai)
+9. File Upload Endpoints (/api/upload)
+
+Legend:
+🔓 = Public endpoint (no authentication required)
+🔒 = Protected endpoint (requires JWT token)
+👑 = Admin only endpoint (requires admin privileges)
+
+================================================================================
+                            1. AUTHENTICATION ENDPOINTS
+================================================================================
+Base Path: /api/auth
+
+🔓 POST   /api/auth/register
+        Description: Register a new user account
+        Body: { username, email, password, isAdmin? }
+        Returns: User data + JWT token + email verification status
+
+🔓 POST   /api/auth/register-admin  
+        Description: Register a new admin user (for development)
+        Body: { username, email, password, adminSecret }
+        Returns: Admin user data + JWT token
+        Note: Requires adminSecret = "ADMIN_SETUP_SECRET_2025"
+
+🔓 POST   /api/auth/login
+        Description: Login existing user
+        Body: { email, password }
+        Returns: User data + JWT token
+
+🔓 GET    /api/auth/verify/:token
+        Description: Verify user email address
+        Params: token (verification token from email)
+        Returns: Verification success message + user data
+
+🔓 POST   /api/auth/setup-admin
+        Description: Convert existing user to admin (temporary)
+        Body: { email, adminSecret }
+        Returns: Updated user with admin privileges
+        Note: adminSecret = "MAKE_ME_ADMIN_2025"
+
+🔒 GET    /api/auth/me
+        Description: Get current user profile
+        Headers: Authorization: Bearer <token>
+        Returns: Current user data
+
+🔒 PUT    /api/auth/profile
+        Description: Update user profile information
+        Headers: Authorization: Bearer <token>
+        Body: { bio, location, website }
+        Returns: Updated user profile
+
+================================================================================
+                              2. QUESTIONS ENDPOINTS
+================================================================================
+Base Path: /api/questions
+
+🔓 GET    /api/questions
+        Description: Get all questions with pagination
+        Query: page?, limit?, sortBy?, tags?, search?
+        Returns: List of questions + pagination info
+
+🔓 GET    /api/questions/search
+        Description: Search questions by title/content
+        Query: q (search query), page?, limit?
+        Returns: Filtered questions matching search
+
+🔓 GET    /api/questions/user/:userId
+        Description: Get all questions by specific user
+        Params: userId
+        Returns: User's questions
+
+🔓 GET    /api/questions/:id
+        Description: Get single question by ID
+        Params: id (question ID)
+        Returns: Question details + answers + comments
+
+🔒 POST   /api/questions
+        Description: Create a new question
+        Headers: Authorization: Bearer <token>
+        Body: { title, body, tags[] }
+        Returns: Created question data
+
+🔒 PUT    /api/questions/:id
+        Description: Update existing question (owner only)
+        Headers: Authorization: Bearer <token>
+        Params: id (question ID)
+        Body: { title?, body?, tags[]? }
+        Returns: Updated question data
+
+🔒 DELETE /api/questions/:id
+        Description: Delete question (owner only)
+        Headers: Authorization: Bearer <token>
+        Params: id (question ID)
+        Returns: Success message
+
+🔒 POST   /api/questions/:id/vote
+        Description: Vote on a question (upvote/downvote)
+        Headers: Authorization: Bearer <token>
+        Params: id (question ID)
+        Body: { voteType: "up" | "down" }
+        Returns: Updated vote counts
+
+================================================================================
+                               3. ANSWERS ENDPOINTS
+================================================================================
+Base Path: /api/answers
+
+🔓 GET    /api/answers/question/:questionId
+        Description: Get all answers for a question
+        Params: questionId
+        Returns: List of answers for the question
+
+🔓 GET    /api/answers/user/:userId
+        Description: Get all answers by specific user
+        Params: userId
+        Returns: User's answers
+
+🔒 POST   /api/answers/:questionId
+        Description: Create answer to a question
+        Headers: Authorization: Bearer <token>
+        Params: questionId
+        Body: { body }
+        Returns: Created answer data
+
+🔒 PUT    /api/answers/:id
+        Description: Update existing answer (owner only)
+        Headers: Authorization: Bearer <token>
+        Params: id (answer ID)
+        Body: { body }
+        Returns: Updated answer data
+
+🔒 DELETE /api/answers/:id
+        Description: Delete answer (owner only)
+        Headers: Authorization: Bearer <token>
+        Params: id (answer ID)
+        Returns: Success message
+
+🔒 POST   /api/answers/:id/vote
+        Description: Vote on an answer (upvote/downvote)
+        Headers: Authorization: Bearer <token>
+        Params: id (answer ID)
+        Body: { voteType: "up" | "down" }
+        Returns: Updated vote counts
+
+🔒 POST   /api/answers/:id/accept
+        Description: Accept answer as best answer (question owner only)
+        Headers: Authorization: Bearer <token>
+        Params: id (answer ID)
+        Returns: Answer marked as accepted
+
+================================================================================
+                              4. COMMENTS ENDPOINTS
+================================================================================
+Base Path: /api/comments
+
+🔓 GET    /api/comments/question/:questionId
+        Description: Get all comments on a question
+        Params: questionId
+        Returns: Comments for the question
+
+🔓 GET    /api/comments/answer/:answerId
+        Description: Get all comments on an answer
+        Params: answerId
+        Returns: Comments for the answer
+
+🔒 POST   /api/comments/question/:questionId
+        Description: Add comment to a question
+        Headers: Authorization: Bearer <token>
+        Params: questionId
+        Body: { body }
+        Returns: Created comment data
+
+🔒 POST   /api/comments/answer/:answerId
+        Description: Add comment to an answer
+        Headers: Authorization: Bearer <token>
+        Params: answerId
+        Body: { body }
+        Returns: Created comment data
+
+🔒 PUT    /api/comments/:id
+        Description: Update existing comment (owner only)
+        Headers: Authorization: Bearer <token>
+        Params: id (comment ID)
+        Body: { body }
+        Returns: Updated comment data
+
+🔒 DELETE /api/comments/:id
+        Description: Delete comment (owner only)
+        Headers: Authorization: Bearer <token>
+        Params: id (comment ID)
+        Returns: Success message
+
+================================================================================
+                               5. USERS ENDPOINTS
+================================================================================
+Base Path: /api/users
+
+🔓 GET    /api/users/leaderboard
+        Description: Get top users by reputation
+        Query: limit?, timeframe? (all|month|week)
+        Returns: Ranked list of users
+
+🔓 GET    /api/users/search
+        Description: Search users by username
+        Query: q (search query), page?, limit?
+        Returns: Filtered users matching search
+
+🔓 GET    /api/users/:id
+        Description: Get public user profile
+        Params: id (user ID)
+        Returns: Public user data + stats + recent activity
+
+🔓 GET    /api/users/:id/activity
+        Description: Get user activity feed
+        Params: id (user ID)
+        Query: page?, limit?
+        Returns: User's questions, answers, and activity
+
+🔒 GET    /api/users/me
+        Description: Get detailed current user profile
+        Headers: Authorization: Bearer <token>
+        Returns: Current user data + statistics + bookmarks
+
+🔒 PUT    /api/users/profile
+        Description: Update user profile
+        Headers: Authorization: Bearer <token>
+        Body: { bio, location, website }
+        Returns: Updated user profile
+
+================================================================================
+                             6. BOOKMARKS ENDPOINTS
+================================================================================
+Base Path: /api/bookmarks
+
+🔒 GET    /api/bookmarks
+        Description: Get user's bookmarked questions
+        Headers: Authorization: Bearer <token>
+        Returns: List of bookmarked questions
+
+🔒 POST   /api/bookmarks/:questionId
+        Description: Bookmark a question
+        Headers: Authorization: Bearer <token>
+        Params: questionId
+        Returns: Bookmark confirmation
+
+🔒 DELETE /api/bookmarks/:questionId
+        Description: Remove bookmark from question
+        Headers: Authorization: Bearer <token>
+        Params: questionId
+        Returns: Bookmark removal confirmation
+
+🔒 GET    /api/bookmarks/check/:questionId
+        Description: Check if question is bookmarked
+        Headers: Authorization: Bearer <token>
+        Params: questionId
+        Returns: Bookmark status (true/false)
+
+================================================================================
+                               7. ADMIN ENDPOINTS
+================================================================================
+Base Path: /api/admin
+
+🔒 POST   /api/admin/reports
+        Description: Create content report
+        Headers: Authorization: Bearer <token>
+        Body: { contentId, contentType, reason }
+        Returns: Created report data
+
+👑 GET    /api/admin/reports
+        Description: Get all content reports (admin only)
+        Headers: Authorization: Bearer <admin-token>
+        Query: page?, limit?, status?, contentType?
+        Returns: List of reports + pagination
+
+👑 PUT    /api/admin/reports/:id/resolve
+        Description: Resolve a content report (admin only)
+        Headers: Authorization: Bearer <admin-token>
+        Params: id (report ID)
+        Body: { action: "dismiss" | "delete" }
+        Returns: Resolution confirmation
+
+👑 GET    /api/admin/stats
+        Description: Get comprehensive admin dashboard statistics
+        Headers: Authorization: Bearer <admin-token>
+        Returns: Complete platform analytics including:
+                - Total counts (users, questions, answers, comments, reports)
+                - User analytics (verified/unverified, admin/regular)
+                - Content analytics (answered/unanswered questions, acceptance rates)
+                - Time-based analytics (today, yesterday, weekly, monthly)
+                - Growth metrics with trend indicators
+                - Top performers (users by reputation, questions by votes)
+                - Most active users and content insights
+                - Popular tags and engagement metrics
+                - System health score and platform metrics
+                - Recent activity feeds
+
+👑 DELETE /api/admin/content/:type/:id
+        Description: Delete content as admin
+        Headers: Authorization: Bearer <admin-token>
+        Params: type (question|answer|comment), id (content ID)
+        Returns: Deletion confirmation
+
+👑 PUT    /api/admin/users/:id
+        Description: Manage user account (ban/unban/promote/demote)
+        Headers: Authorization: Bearer <admin-token>
+        Params: id (user ID)
+        Body: { action: "ban" | "unban" | "promote" | "demote" }
+        Returns: Updated user status
+
+================================================================================
+                             8. AI FEATURES ENDPOINTS
+================================================================================
+Base Path: /api/ai
+
+🔓 GET    /api/ai/status
+        Description: Check AI service status
+        Returns: AI service availability status
+
+🔓 POST   /api/ai/similar-questions
+        Description: Find similar questions
+        Body: { questionTitle, questionBody }
+        Returns: List of similar questions
+
+🔒 POST   /api/ai/answer-suggestion
+        Description: Get AI-generated answer suggestions
+        Headers: Authorization: Bearer <token>
+        Body: { questionTitle, questionBody, tags[] }
+        Returns: AI-suggested answer content
+
+🔒 POST   /api/ai/tag-suggestions
+        Description: Get AI-suggested tags for question
+        Headers: Authorization: Bearer <token>
+        Body: { questionTitle, questionBody }
+        Returns: Suggested relevant tags
+
+🔒 POST   /api/ai/chatbot
+        Description: AI chatbot for general help
+        Headers: Authorization: Bearer <token>
+        Body: { message, context? }
+        Returns: AI chatbot response
+
+🔒 POST   /api/ai/question-improvements
+        Description: Get suggestions to improve question
+        Headers: Authorization: Bearer <token>
+        Body: { questionTitle, questionBody }
+        Returns: Question improvement suggestions
+
+================================================================================
+                            9. FILE UPLOAD ENDPOINTS
+================================================================================
+Base Path: /api/upload
+
+🔒 POST   /api/upload
+        Description: Upload files (images, documents)
+        Headers: Authorization: Bearer <token>
+        Body: multipart/form-data with 'file' field
+        Returns: Uploaded file URL and metadata
+
+================================================================================
+                                ERROR RESPONSES
+================================================================================
+
+All endpoints return standardized error responses:
+
+{
+  "success": false,
+  "message": "Error description",
+  "error": "Detailed error information" (development only)
+}
+
+Common HTTP Status Codes:
+- 200: Success
+- 201: Created successfully
+- 400: Bad request / Validation error
+- 401: Unauthorized / Invalid token
+- 403: Forbidden / Admin access required
+- 404: Resource not found
+- 500: Internal server error
+
+================================================================================
+                            AUTHENTICATION DETAILS
+================================================================================
+
+JWT Token Format:
+- Header: Authorization: Bearer <your-jwt-token>
+- Token contains: { id: userId, iat: issuedAt, exp: expiresAt }
+- Default expiration: 30 days
+- Required for all 🔒 endpoints
+- Admin privileges required for all 👑 endpoints
+
+Admin Access:
+- Regular users: isAdmin = false
+- Admin users: isAdmin = true
+- Admin registration requires secret key
+- Admins can access all user features + admin panel
+
+================================================================================
+                              RATE LIMITING
+================================================================================
+
+Current rate limits (if implemented):
+- Authentication endpoints: 10 requests per minute
+- General API endpoints: 100 requests per minute
+- File upload: 5 requests per minute
+- Admin endpoints: No specific limits
+
+================================================================================
+                               PAGINATION
+================================================================================
+
+Default pagination parameters for list endpoints:
+- page: Page number (default: 1)
+- limit: Items per page (default: 20, max: 100)
+
+Pagination response format:
+{
+  "success": true,
+  "data": {
+    "items": [...],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 100,
+      "hasNextPage": true,
+      "hasPrevPage": false
+    }
+  }
+}
+
+================================================================================
+                                SEARCH FEATURES
+================================================================================
+
+Search capabilities:
+- Questions: Search by title, content, tags
+- Users: Search by username
+- Case-insensitive search
+- Partial matching supported
+- Results sorted by relevance
+
+================================================================================
+                               VOTING SYSTEM
+================================================================================
+
+Voting mechanics:
+- Vote types: "up" (upvote) or "down" (downvote)
+- Users can vote on questions and answers
+- Cannot vote on own content
+- Can change vote (upvote → downvote or vice versa)
+- Voting affects user reputation
+
+================================================================================
+                             REPUTATION SYSTEM
+================================================================================
+
+Reputation calculation:
+- Question upvote: +5 points
+- Answer upvote: +10 points
+- Answer accepted: +15 points
+- Question/Answer downvote: -2 points
+- Default starting reputation: 0
+- Displayed in user profiles and leaderboards
+
+================================================================================
+                                TAGS SYSTEM
+================================================================================
+
+Tag features:
+- Questions can have multiple tags
+- Tags are case-insensitive
+- Popular tags tracked in admin dashboard
+- Used for search and categorization
+- AI can suggest relevant tags
+
+================================================================================
+                              CONTENT MODERATION
+================================================================================
+
+Reporting system:
+- Users can report inappropriate content
+- Report types: spam, harassment, inappropriate, etc.
+- Admins can view and resolve reports
+- Actions: dismiss report or delete content
+- Moderation workload tracked in admin dashboard
+
+================================================================================
+                               FILE UPLOADS
+================================================================================
+
+Upload specifications:
+- Supported formats: Images (jpg, png, gif), Documents (pdf, doc, txt)
+- Maximum file size: 10MB
+- Files stored in /uploads directory
+- Secure filename generation
+- File URL returned for embedding
+
+================================================================================
+                                AI FEATURES
+================================================================================
+
+AI capabilities:
+- Answer suggestions based on question content
+- Tag suggestions for better categorization
+- Question improvement recommendations
+- Similar question detection
+- General chatbot assistance
+- Context-aware responses
+
+================================================================================
+                            ADMIN DASHBOARD METRICS
+================================================================================
+
+Comprehensive analytics available:
+- User Statistics: Total, verified, admins, growth rates
+- Content Statistics: Questions, answers, comments, engagement rates
+- Activity Tracking: Daily, weekly, monthly trends
+- Performance Metrics: Top users, popular content
+- System Health: Overall platform health score
+- Moderation Load: Pending reports and resolution rates
+
+================================================================================
+                                DEVELOPMENT NOTES
+================================================================================
+
+Environment Variables Required:
+- MONGODB_URI: MongoDB connection string
+- JWT_SECRET: Secret key for JWT tokens
+- EMAIL_USER: SMTP email username
+- EMAIL_PASS: SMTP email password
+- EMAIL_SERVICE: Email service provider (default: gmail)
+
+Development Features:
+- CORS enabled for all origins
+- Detailed error logging
+- Email verification system
+- Temporary admin setup endpoints
+- Comprehensive API documentation
+
+Production Considerations:
+- Remove development admin endpoints
+- Implement proper rate limiting
+- Add request validation middleware
+- Set up proper CORS origins
+- Implement file upload security
+- Add API usage analytics
+
+================================================================================
+                                   END OF DOCUMENTATION
+================================================================================
+
+Last Updated: August 2, 2025
+Total Endpoints: 50+
+Documentation Version: 1.0.0
+
+For technical support or questions about this API, please refer to the 
+POSTMAN_GUIDELINES.md file for detailed testing instructions.

@@ -1,0 +1,1285 @@
+================================================================================
+                    MOBILE Q&A APP - CI/CD PIPELINE CONFIGURATION
+================================================================================
+
+Project: Mobile Question & Answer Platform
+Pipeline Version: 1.0.0
+Date: August 2, 2025
+Environment: Development → Staging → Production
+
+================================================================================
+                              PIPELINE OVERVIEW
+================================================================================
+
+PIPELINE STAGES:
+1. Source Code Management (Git)
+2. Code Quality & Security Checks
+3. Automated Testing Suite
+4. Build & Package Applications
+5. Deployment to Environments
+6. Post-Deployment Verification
+7. Monitoring & Alerting
+
+SUPPORTED PLATFORMS:
+- Backend API (Node.js/Express)
+- Frontend Web App (React/Vue/Angular)
+- Mobile Apps (iOS/Android)
+- Database Migrations
+- Infrastructure as Code
+
+================================================================================
+                           GITHUB ACTIONS WORKFLOW
+================================================================================
+
+FILE: .github/workflows/ci-cd-pipeline.yml
+
+```yaml
+name: Mobile Q&A App CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+
+env:
+  NODE_VERSION: '18.x'
+  MONGODB_URI_TEST: 'mongodb://localhost:27017/qa_app_test'
+  JWT_SECRET: 'test_jwt_secret_key'
+
+jobs:
+  # ============================================================================
+  #                           CODE QUALITY & SECURITY
+  # ============================================================================
+  
+  code-quality:
+    name: Code Quality & Security Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install Dependencies
+      run: |
+        cd backend
+        npm ci
+    
+    - name: ESLint Code Analysis
+      run: |
+        cd backend
+        npm run lint
+    
+    - name: Prettier Code Formatting Check
+      run: |
+        cd backend
+        npm run format:check
+    
+    - name: Security Vulnerability Scan
+      run: |
+        cd backend
+        npm audit --audit-level=moderate
+    
+    - name: Dependency License Check
+      run: |
+        cd backend
+        npx license-checker --summary
+    
+    - name: SonarCloud Code Analysis
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # ============================================================================
+  #                              AUTOMATED TESTING
+  # ============================================================================
+  
+  backend-tests:
+    name: Backend API Testing
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    services:
+      mongodb:
+        image: mongo:5.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd mongosh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install Backend Dependencies
+      run: |
+        cd backend
+        npm ci
+    
+    - name: Run Unit Tests
+      run: |
+        cd backend
+        npm run test:unit
+      env:
+        MONGODB_URI: ${{ env.MONGODB_URI_TEST }}
+        JWT_SECRET: ${{ env.JWT_SECRET }}
+    
+    - name: Run Integration Tests
+      run: |
+        cd backend
+        npm run test:integration
+      env:
+        MONGODB_URI: ${{ env.MONGODB_URI_TEST }}
+        JWT_SECRET: ${{ env.JWT_SECRET }}
+    
+    - name: Run API Tests
+      run: |
+        cd backend
+        npm run test:api
+      env:
+        MONGODB_URI: ${{ env.MONGODB_URI_TEST }}
+        JWT_SECRET: ${{ env.JWT_SECRET }}
+    
+    - name: Generate Test Coverage Report
+      run: |
+        cd backend
+        npm run test:coverage
+    
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage/lcov.info
+        flags: backend
+        name: backend-coverage
+
+  # ============================================================================
+  #                              BUILD APPLICATIONS
+  # ============================================================================
+  
+  build-backend:
+    name: Build Backend API
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install Dependencies
+      run: |
+        cd backend
+        npm ci --production
+    
+    - name: Build Application
+      run: |
+        cd backend
+        npm run build
+    
+    - name: Create Production Archive
+      run: |
+        cd backend
+        tar -czf ../backend-build.tar.gz .
+    
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: backend-build
+        path: backend-build.tar.gz
+        retention-days: 7
+
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and Push Backend Image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/qa-app-backend:latest
+          ${{ secrets.DOCKER_USERNAME }}/qa-app-backend:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # ============================================================================
+  #                         DEPLOYMENT TO STAGING
+  # ============================================================================
+  
+  deploy-staging:
+    name: Deploy to Staging Environment
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-docker]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: backend-build
+    
+    - name: Deploy to Staging Server
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        port: ${{ secrets.STAGING_PORT }}
+        script: |
+          cd /var/www/qa-app-staging
+          
+          # Backup current version
+          sudo cp -r current backup-$(date +%Y%m%d-%H%M%S)
+          
+          # Download and extract new build
+          wget ${{ secrets.ARTIFACT_URL }}/backend-build.tar.gz
+          tar -xzf backend-build.tar.gz -C current/
+          
+          # Update environment variables
+          cp .env.staging current/.env
+          
+          # Install dependencies and restart services
+          cd current
+          npm install --production
+          sudo systemctl restart qa-app-staging
+          sudo systemctl restart nginx
+          
+          # Health check
+          sleep 10
+          curl -f http://localhost:3001/health || exit 1
+    
+    - name: Run Staging Tests
+      run: |
+        cd backend
+        npm run test:staging
+      env:
+        STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
+        STAGING_API_KEY: ${{ secrets.STAGING_API_KEY }}
+
+  # ============================================================================
+  #                        DEPLOYMENT TO PRODUCTION
+  # ============================================================================
+  
+  deploy-production:
+    name: Deploy to Production Environment
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-docker]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: backend-build
+    
+    - name: Deploy to Production Servers
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USER }}
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        port: ${{ secrets.PRODUCTION_PORT }}
+        script: |
+          cd /var/www/qa-app-production
+          
+          # Create backup
+          sudo cp -r current backup-$(date +%Y%m%d-%H%M%S)
+          
+          # Blue-Green Deployment Strategy
+          if [ -d "blue" ] && [ ! -d "green" ]; then
+            DEPLOY_ENV="green"
+            CURRENT_ENV="blue"
+          else
+            DEPLOY_ENV="blue"
+            CURRENT_ENV="green"
+          fi
+          
+          echo "Deploying to $DEPLOY_ENV environment"
+          
+          # Prepare new environment
+          sudo mkdir -p $DEPLOY_ENV
+          wget ${{ secrets.ARTIFACT_URL }}/backend-build.tar.gz
+          tar -xzf backend-build.tar.gz -C $DEPLOY_ENV/
+          
+          # Configure environment
+          cp .env.production $DEPLOY_ENV/.env
+          
+          # Install and start new version
+          cd $DEPLOY_ENV
+          npm install --production
+          sudo systemctl start qa-app-$DEPLOY_ENV
+          
+          # Health check
+          sleep 15
+          curl -f http://localhost:3000/health || exit 1
+          
+          # Switch traffic to new version
+          sudo ln -sfn $DEPLOY_ENV current
+          sudo systemctl reload nginx
+          
+          # Stop old version
+          sudo systemctl stop qa-app-$CURRENT_ENV
+          
+          echo "Production deployment completed successfully"
+
+  # ============================================================================
+  #                        POST-DEPLOYMENT VERIFICATION
+  # ============================================================================
+  
+  post-deployment-tests:
+    name: Post-Deployment Verification
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install Test Dependencies
+      run: |
+        cd backend
+        npm ci
+    
+    - name: Run Production Smoke Tests
+      run: |
+        cd backend
+        npm run test:smoke
+      env:
+        PRODUCTION_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+        PRODUCTION_API_KEY: ${{ secrets.PRODUCTION_API_KEY }}
+    
+    - name: Run Load Tests
+      run: |
+        cd backend
+        npm run test:load
+      env:
+        PRODUCTION_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+    
+    - name: Security Penetration Testing
+      run: |
+        cd backend
+        npm run test:security
+      env:
+        PRODUCTION_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+    
+    - name: Performance Monitoring Check
+      run: |
+        curl -f "${{ secrets.MONITORING_WEBHOOK_URL }}/health"
+    
+    - name: Send Deployment Notification
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        message: |
+          Production deployment completed successfully!
+          Version: ${{ github.sha }}
+          Deployed by: ${{ github.actor }}
+          View: ${{ secrets.PRODUCTION_API_URL }}
+```
+
+================================================================================
+                               JENKINS PIPELINE
+================================================================================
+
+FILE: Jenkinsfile
+
+```groovy
+pipeline {
+    agent any
+    
+    environment {
+        NODE_VERSION = '18.x'
+        DOCKER_REGISTRY = 'your-registry.com'
+        APP_NAME = 'qa-app'
+        MONGODB_URI_TEST = 'mongodb://localhost:27017/qa_app_test'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(
+                        script: "git rev-parse --short HEAD",
+                        returnStdout: true
+                    ).trim()
+                }
+            }
+        }
+        
+        stage('Setup') {
+            steps {
+                sh '''
+                    node --version
+                    npm --version
+                    cd backend
+                    npm ci
+                '''
+            }
+        }
+        
+        stage('Code Quality') {
+            parallel {
+                stage('Lint') {
+                    steps {
+                        sh '''
+                            cd backend
+                            npm run lint
+                        '''
+                    }
+                }
+                
+                stage('Format Check') {
+                    steps {
+                        sh '''
+                            cd backend
+                            npm run format:check
+                        '''
+                    }
+                }
+                
+                stage('Security Audit') {
+                    steps {
+                        sh '''
+                            cd backend
+                            npm audit --audit-level=moderate
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Testing') {
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        sh '''
+                            cd backend
+                            npm run test:unit
+                        '''
+                    }
+                    post {
+                        always {
+                            publishTestResults testResultsPattern: 'backend/test-results.xml'
+                        }
+                    }
+                }
+                
+                stage('Integration Tests') {
+                    steps {
+                        sh '''
+                            cd backend
+                            npm run test:integration
+                        '''
+                    }
+                }
+                
+                stage('API Tests') {
+                    steps {
+                        sh '''
+                            cd backend
+                            npm run test:api
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Build') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                sh '''
+                    cd backend
+                    npm run build
+                '''
+                archiveArtifacts artifacts: 'backend/dist/**', fingerprint: true
+            }
+        }
+        
+        stage('Docker Build') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                script {
+                    def image = docker.build("${DOCKER_REGISTRY}/${APP_NAME}:${env.GIT_COMMIT_SHORT}")
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'docker-registry-credentials') {
+                        image.push()
+                        image.push('latest')
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                script {
+                    deployToEnvironment('staging')
+                }
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    input message: 'Deploy to Production?', ok: 'Deploy'
+                    deployToEnvironment('production')
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            slackSend channel: '#deployments',
+                     color: 'good',
+                     message: "✅ Pipeline succeeded for ${env.JOB_NAME} - ${env.BUILD_NUMBER}"
+        }
+        failure {
+            slackSend channel: '#deployments',
+                     color: 'danger',
+                     message: "❌ Pipeline failed for ${env.JOB_NAME} - ${env.BUILD_NUMBER}"
+        }
+    }
+}
+
+def deployToEnvironment(environment) {
+    sh """
+        kubectl set image deployment/${APP_NAME} \
+            ${APP_NAME}=${DOCKER_REGISTRY}/${APP_NAME}:${env.GIT_COMMIT_SHORT} \
+            --namespace=${environment}
+        
+        kubectl rollout status deployment/${APP_NAME} --namespace=${environment}
+        
+        # Health check
+        sleep 30
+        kubectl exec deployment/${APP_NAME} --namespace=${environment} -- \
+            curl -f http://localhost:3000/health
+    """
+}
+```
+
+================================================================================
+                              GITLAB CI/CD PIPELINE
+================================================================================
+
+FILE: .gitlab-ci.yml
+
+```yaml
+stages:
+  - validate
+  - test
+  - build
+  - deploy
+  - verify
+
+variables:
+  NODE_VERSION: "18"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# ============================================================================
+#                              VALIDATION STAGE
+# ============================================================================
+
+lint:
+  stage: validate
+  image: node:${NODE_VERSION}
+  before_script:
+    - cd backend
+    - npm ci
+  script:
+    - npm run lint
+    - npm run format:check
+  artifacts:
+    reports:
+      junit: backend/lint-results.xml
+
+security-scan:
+  stage: validate
+  image: node:${NODE_VERSION}
+  before_script:
+    - cd backend
+    - npm ci
+  script:
+    - npm audit --audit-level=moderate
+    - npx snyk test --severity-threshold=medium
+  allow_failure: true
+
+# ============================================================================
+#                              TESTING STAGE
+# ============================================================================
+
+unit-tests:
+  stage: test
+  image: node:${NODE_VERSION}
+  services:
+    - mongo:5.0
+  variables:
+    MONGODB_URI: "mongodb://mongo:27017/qa_app_test"
+  before_script:
+    - cd backend
+    - npm ci
+  script:
+    - npm run test:unit
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    reports:
+      junit: backend/test-results.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: backend/coverage/cobertura-coverage.xml
+
+integration-tests:
+  stage: test
+  image: node:${NODE_VERSION}
+  services:
+    - mongo:5.0
+  variables:
+    MONGODB_URI: "mongodb://mongo:27017/qa_app_test"
+  before_script:
+    - cd backend
+    - npm ci
+  script:
+    - npm run test:integration
+
+api-tests:
+  stage: test
+  image: node:${NODE_VERSION}
+  services:
+    - mongo:5.0
+  variables:
+    MONGODB_URI: "mongodb://mongo:27017/qa_app_test"
+  before_script:
+    - cd backend
+    - npm ci
+  script:
+    - npm run test:api
+
+# ============================================================================
+#                              BUILD STAGE
+# ============================================================================
+
+build-backend:
+  stage: build
+  image: node:${NODE_VERSION}
+  before_script:
+    - cd backend
+    - npm ci
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - backend/dist/
+    expire_in: 1 week
+
+docker-build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - cd backend
+    - docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA .
+    - docker build -t $CI_REGISTRY_IMAGE/backend:latest .
+    - docker push $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/backend:latest
+
+# ============================================================================
+#                            DEPLOYMENT STAGES
+# ============================================================================
+
+deploy-staging:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl openssh-client
+  script:
+    - echo "Deploying to staging environment..."
+    - |
+      ssh -o StrictHostKeyChecking=no $STAGING_USER@$STAGING_HOST << EOF
+        cd /var/www/qa-app-staging
+        docker pull $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+        docker-compose down
+        docker-compose up -d
+        sleep 15
+        curl -f http://localhost:3000/health || exit 1
+      EOF
+  environment:
+    name: staging
+    url: https://staging-api.qa-app.com
+  only:
+    - develop
+
+deploy-production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl openssh-client
+  script:
+    - echo "Deploying to production environment..."
+    - |
+      ssh -o StrictHostKeyChecking=no $PRODUCTION_USER@$PRODUCTION_HOST << EOF
+        cd /var/www/qa-app-production
+        docker pull $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+        docker tag $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA qa-app-backend:new
+        
+        # Blue-Green Deployment
+        docker-compose -f docker-compose.blue-green.yml up -d qa-app-new
+        sleep 30
+        curl -f http://localhost:3001/health || exit 1
+        
+        # Switch traffic
+        docker-compose -f docker-compose.blue-green.yml stop qa-app-old
+        docker-compose -f docker-compose.blue-green.yml up -d qa-app
+        
+        echo "Production deployment completed"
+      EOF
+  environment:
+    name: production
+    url: https://api.qa-app.com
+  when: manual
+  only:
+    - main
+
+# ============================================================================
+#                            VERIFICATION STAGE
+# ============================================================================
+
+smoke-tests:
+  stage: verify
+  image: node:${NODE_VERSION}
+  before_script:
+    - cd backend
+    - npm ci
+  script:
+    - npm run test:smoke
+  environment:
+    name: production
+  only:
+    - main
+
+performance-tests:
+  stage: verify
+  image: node:${NODE_VERSION}
+  before_script:
+    - cd backend
+    - npm ci
+  script:
+    - npm run test:performance
+  artifacts:
+    reports:
+      performance: backend/performance-report.json
+  only:
+    - main
+```
+
+================================================================================
+                              DOCKER CONFIGURATIONS
+================================================================================
+
+FILE: backend/Dockerfile
+
+```dockerfile
+# Multi-stage build for production optimization
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Build application
+RUN npm run build
+
+# ============================================================================
+# Production stage
+FROM node:18-alpine AS production
+
+# Create app directory
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Copy built application
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Expose port
+EXPOSE 3000
+
+# Switch to non-root user
+USER nodejs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Start application
+CMD ["node", "dist/app.js"]
+```
+
+FILE: docker-compose.yml
+
+```yaml
+version: '3.8'
+
+services:
+  # Backend API Service
+  qa-app-backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/qa_app
+      - JWT_SECRET=${JWT_SECRET}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - qa-app-network
+
+  # MongoDB Database
+  mongo:
+    image: mongo:5.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_INITDB_DATABASE=qa_app
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - qa-app-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - qa-app-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - qa-app-backend
+    restart: unless-stopped
+    networks:
+      - qa-app-network
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  qa-app-network:
+    driver: bridge
+```
+
+================================================================================
+                              KUBERNETES DEPLOYMENT
+================================================================================
+
+FILE: k8s/deployment.yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qa-app-backend
+  namespace: qa-app
+  labels:
+    app: qa-app-backend
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: qa-app-backend
+  template:
+    metadata:
+      labels:
+        app: qa-app-backend
+        version: v1
+    spec:
+      containers:
+      - name: qa-app-backend
+        image: your-registry.com/qa-app-backend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: qa-app-secrets
+              key: mongodb-uri
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: qa-app-secrets
+              key: jwt-secret
+        - name: EMAIL_USER
+          valueFrom:
+            secretKeyRef:
+              name: qa-app-secrets
+              key: email-user
+        - name: EMAIL_PASS
+          valueFrom:
+            secretKeyRef:
+              name: qa-app-secrets
+              key: email-pass
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/uploads
+      volumes:
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: qa-app-uploads-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qa-app-backend-service
+  namespace: qa-app
+spec:
+  selector:
+    app: qa-app-backend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qa-app-ingress
+  namespace: qa-app
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  tls:
+  - hosts:
+    - api.qa-app.com
+    secretName: qa-app-tls
+  rules:
+  - host: api.qa-app.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: qa-app-backend-service
+            port:
+              number: 80
+```
+
+================================================================================
+                              MONITORING & LOGGING
+================================================================================
+
+MONITORING STACK:
+- Prometheus for metrics collection
+- Grafana for visualization
+- AlertManager for alerting
+- ELK Stack for logging
+- Jaeger for distributed tracing
+
+METRICS TO MONITOR:
+- API response times
+- Database connection pool
+- Memory and CPU usage
+- Request rates and error rates
+- User registration/login rates
+- Question/answer creation rates
+
+ALERTS TO CONFIGURE:
+- High error rates (>5%)
+- Slow response times (>2s)
+- Database connection issues
+- High memory usage (>80%)
+- Disk space warnings (<20%)
+- SSL certificate expiry
+
+LOG AGGREGATION:
+- Application logs
+- Access logs
+- Error logs
+- Security logs
+- Audit logs
+
+================================================================================
+                              SECURITY PIPELINE
+================================================================================
+
+SECURITY CHECKS:
+1. Dependency vulnerability scanning
+2. Static code analysis (SAST)
+3. Dynamic application security testing (DAST)
+4. Container image scanning
+5. Infrastructure security scanning
+6. Secrets detection
+7. License compliance checking
+
+TOOLS:
+- Snyk for dependency scanning
+- SonarQube for code quality
+- OWASP ZAP for security testing
+- Trivy for container scanning
+- TruffleHog for secrets detection
+
+================================================================================
+                            ENVIRONMENT CONFIGURATIONS
+================================================================================
+
+DEVELOPMENT ENVIRONMENT:
+- Local development with hot-reload
+- In-memory database for testing
+- Mock external services
+- Debug logging enabled
+- No SSL requirements
+
+STAGING ENVIRONMENT:
+- Production-like configuration
+- Shared database instance
+- Real external service integrations
+- Comprehensive logging
+- SSL certificates
+- Performance monitoring
+
+PRODUCTION ENVIRONMENT:
+- High availability setup
+- Load balancing
+- Auto-scaling
+- Database clustering
+- CDN integration
+- Advanced monitoring
+- Security hardening
+- Backup strategies
+
+================================================================================
+                              ROLLBACK STRATEGIES
+================================================================================
+
+AUTOMATED ROLLBACK TRIGGERS:
+- Health check failures
+- High error rates
+- Performance degradation
+- Critical security alerts
+
+ROLLBACK METHODS:
+1. Blue-Green Deployment rollback
+2. Canary deployment rollback
+3. Database migration rollback
+4. Configuration rollback
+5. Infrastructure rollback
+
+ROLLBACK TESTING:
+- Regular rollback drills
+- Automated rollback testing
+- Recovery time measurement
+- Data integrity verification
+
+================================================================================
+                              PIPELINE OPTIMIZATION
+================================================================================
+
+PERFORMANCE IMPROVEMENTS:
+- Parallel job execution
+- Caching strategies
+- Incremental builds
+- Smart test selection
+- Resource optimization
+
+COST OPTIMIZATION:
+- Spot instances for testing
+- Build cache utilization
+- Resource right-sizing
+- Pipeline efficiency monitoring
+
+DEVELOPER EXPERIENCE:
+- Fast feedback loops
+- Clear error messages
+- Pipeline visualization
+- Self-service deployments
+- Automated notifications
+
+================================================================================
+                                CONCLUSION
+================================================================================
+
+This CI/CD pipeline configuration provides:
+
+✅ Comprehensive testing strategies
+✅ Multiple deployment options
+✅ Security and quality gates
+✅ Monitoring and alerting
+✅ Rollback capabilities
+✅ Performance optimization
+✅ Developer-friendly workflows
+
+The pipeline supports modern DevOps practices including:
+- Infrastructure as Code
+- Continuous Integration/Deployment
+- Automated Testing
+- Security Integration
+- Monitoring and Observability
+- Disaster Recovery
+
+Choose the appropriate pipeline configuration based on your:
+- Team preferences
+- Infrastructure setup
+- Deployment requirements
+- Security compliance needs
+- Budget constraints
+
+================================================================================
+                            PIPELINE DOCUMENTATION
+================================================================================
+
+Pipeline Version: 1.0.0
+Last Updated: August 2, 2025
+Maintained by: DevOps Team
+Review Schedule: Monthly
+
+For pipeline support or modifications, please:
+1. Submit a pull request with changes
+2. Test in development environment
+3. Get approval from DevOps team
+4. Deploy during maintenance window

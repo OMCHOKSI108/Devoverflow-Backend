@@ -1,0 +1,95 @@
+Q&A MOBILE APP API ENDPOINTS
+===============================
+
+AUTHENTICATION ENDPOINTS
+1. POST /api/auth/register - Register new user account
+2. POST /api/auth/login - User login, get JWT token
+3. GET /api/auth/me - Get current user profile
+4. PUT /api/auth/profile - Update user profile
+
+QUESTION ENDPOINTS
+5. GET /api/questions - Get all questions with pagination
+6. POST /api/questions - Create new question
+7. GET /api/questions/:id - Get specific question by ID
+8. PUT /api/questions/:id - Update question (owner only)
+9. DELETE /api/questions/:id - Delete question (owner/admin)
+10. GET /api/questions/search - Search questions by keywords
+11. POST /api/questions/:id/vote - Vote on question (up/down)
+12. GET /api/questions/user/:userId - Get questions by user
+
+ANSWER ENDPOINTS
+13. POST /api/answers/:questionId - Create answer for question
+14. GET /api/answers/:questionId - Get all answers for question
+15. PUT /api/answers/:id - Update answer (owner only)
+16. DELETE /api/answers/:id - Delete answer (owner/admin)
+17. POST /api/answers/:id/vote - Vote on answer (up/down)
+18. POST /api/answers/:id/accept - Accept answer as correct (question owner)
+19. GET /api/answers/user/:userId - Get answers by user
+
+COMMENT ENDPOINTS
+20. POST /api/comments/question/:questionId - Add comment to question
+21. POST /api/comments/answer/:answerId - Add comment to answer
+22. GET /api/comments/question/:questionId - Get question comments
+23. GET /api/comments/answer/:answerId - Get answer comments
+24. PUT /api/comments/:id - Update comment (owner only)
+25. DELETE /api/comments/:id - Delete comment (owner/admin)
+
+AI FEATURE ENDPOINTS
+26. GET /api/ai/status - Check AI service status
+27. POST /api/ai/answer-suggestion - Get AI answer suggestions
+28. POST /api/ai/tag-suggestions - Get AI tag suggestions
+29. POST /api/ai/chatbot - Chat with AI assistant
+30. POST /api/ai/question-improvements - Get question improvement suggestions
+31. POST /api/ai/similar-questions - Find similar questions
+
+USER & SOCIAL ENDPOINTS
+32. GET /api/users/:id - Get user profile by ID
+33. PUT /api/users/profile - Update current user profile
+34. GET /api/users/leaderboard - Get top users by reputation
+35. GET /api/users/search - Search users by username
+36. GET /api/users/:id/activity - Get user activity feed
+37. POST /api/users/:id/follow - Follow another user
+38. DELETE /api/users/:id/follow - Unfollow user
+39. GET /api/users/:id/following - Get user's following list
+40. GET /api/users/:id/followers - Get user's followers list
+41. GET /api/users/suggestions - Get user connection suggestions
+42. GET /api/users/:id/connection-status - Check connection status
+
+BOOKMARK ENDPOINTS
+43. GET /api/bookmarks - Get user's bookmarked questions
+44. POST /api/bookmarks/:questionId - Bookmark a question
+45. DELETE /api/bookmarks/:questionId - Remove bookmark
+
+FILE UPLOAD ENDPOINT
+46. POST /api/upload - Upload files (images, documents)
+
+ADMIN PANEL ENDPOINTS
+47. GET /api/admin/reports - Get all content reports
+48. POST /api/admin/reports - Create new report
+49. PUT /api/admin/reports/:id/resolve - Resolve report
+50. DELETE /api/admin/content/:type/:id - Delete content as admin
+51. GET /api/admin/stats - Get admin dashboard statistics
+52. PUT /api/admin/users/:id - Manage users (ban/unban/promote/demote)
+
+FRIEND SYSTEM ENDPOINTS
+53. POST /api/friends/add - Send friend request
+54. POST /api/friends/remove - Remove friend/cancel request
+55. GET /api/friends/profile/:id - Get detailed user profile with friend status
+
+UTILITY ENDPOINTS
+56. GET / - API server information
+57. GET /api - Show all available endpoints
+58. GET /health - Health check endpoint
+59. GET /api/docs - Complete API documentation
+60. GET /api/postman-guide - Postman testing guide
+
+AUTHENTICATION REQUIREMENTS:
+- Public: Endpoints 1, 2, 5, 7, 10, 12, 14, 26, 32, 34, 35, 36, 39, 40, 56, 57, 58, 59, 60
+- User Token Required: Endpoints 3, 4, 6, 8, 9, 11, 13, 15, 16, 17, 18, 19, 20, 21, 24, 25, 27, 28, 29, 30, 31, 33, 37, 38, 41, 42, 43, 44, 45, 46, 53, 54, 55
+- Admin Token Required: Endpoints 47, 48, 49, 50, 51, 52
+
+COMMON PARAMETERS:
+- ?page=1&limit=10 - Pagination
+- ?sortBy=field&order=asc/desc - Sorting
+- ?tags=tag1,tag2 - Filter by tags
+- ?q=search_term - Search query

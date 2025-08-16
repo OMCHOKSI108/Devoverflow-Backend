@@ -2,7 +2,7 @@
 
 A complete Node.js backend API for a mobile Q&A application with AI integration.
 
-## 🌟 Features
+## Features
 
 ### Core Functionality
 - **User Authentication** - Registration, login, email verification, JWT tokens
@@ -19,7 +19,7 @@ A complete Node.js backend API for a mobile Q&A application with AI integration.
 - **Pagination** - Efficient data loading for mobile clients
 - **Error Handling** - Comprehensive error handling and validation
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **Runtime**: Node.js
 - **Framework**: Express.js
@@ -30,14 +30,14 @@ A complete Node.js backend API for a mobile Q&A application with AI integration.
 - **Email**: Nodemailer
 - **Security**: bcryptjs for password hashing
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Node.js (v14 or higher)
 - MongoDB (local or cloud)
 - Google Gemini API key (for AI features)
 - Email service credentials (for email verification)
 
-## 🚀 Quick Start
+## Quick Start
 
 1. **Install Dependencies**
    ```bash
@@ -64,7 +64,7 @@ A complete Node.js backend API for a mobile Q&A application with AI integration.
    - Open http://localhost:3000
    - You should see the API status page
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Authentication
 - `POST /api/auth/register` - Register new user
@@ -131,7 +131,7 @@ A complete Node.js backend API for a mobile Q&A application with AI integration.
 - `DELETE /api/admin/content/:type/:id` - Delete content as admin
 - `PUT /api/admin/users/:id` - Manage user (ban/promote/etc.)
 
-## 📱 Mobile App Integration
+## Mobile App Integration
 
 This backend is specifically designed for mobile applications with:
 
@@ -142,7 +142,7 @@ This backend is specifically designed for mobile applications with:
 - **Pagination** - Efficient data loading for mobile networks
 - **Error Handling** - Consistent error response format
 
-## 🔒 Security Features
+## Security Features
 
 - **JWT Authentication** - Secure token-based authentication
 - **Password Hashing** - bcryptjs for secure password storage
@@ -151,7 +151,7 @@ This backend is specifically designed for mobile applications with:
 - **CORS Protection** - Controlled cross-origin access
 - **File Upload Security** - File type and size restrictions
 
-## 🎯 Business Logic Examples
+## Business Logic Examples
 
 ### Reputation System
 - Question upvote: +5 reputation
@@ -171,7 +171,7 @@ This backend is specifically designed for mobile applications with:
 - **Automated Actions**: Bulk content management
 - **User Management**: Ban, promote, and manage user accounts
 
-## 🧪 Testing the API
+## Testing the API
 
 You can test the API using tools like:
 - **Postman** - Import the API endpoints
@@ -185,7 +185,7 @@ curl -X POST http://localhost:3000/api/auth/login \
   -d '{"email": "user@example.com", "password": "password123"}'
 ```
 
-## 📖 Architecture Overview
+## Architecture Overview
 
 This backend follows the **Monolithic Architecture** pattern, which is perfect for getting started:
 
@@ -200,7 +200,7 @@ The structure follows the **MVC Pattern**:
 - **Routes** (`/routes`) - API endpoint definitions and middleware
 - **Middleware** (`/middleware`) - Authentication and validation
 
-## 🔧 Configuration
+## Configuration
 
 Key environment variables to configure:
 
@@ -225,7 +225,7 @@ PORT=3000
 NODE_ENV=development
 ```
 
-## 🚀 Deployment
+## Deployment
 
 This backend can be deployed to:
 - **Heroku** - Easy deployment with MongoDB Atlas
@@ -233,7 +233,7 @@ This backend can be deployed to:
 - **DigitalOcean** - Simple cloud deployment
 - **Vercel** - Serverless deployment option
 
-## 📚 Documentation
+## Documentation
 
 The backend is fully documented with:
 - **Inline Comments** - Detailed code documentation
@@ -241,7 +241,7 @@ The backend is fully documented with:
 - **Error Handling** - Comprehensive error responses
 - **Examples** - Real-world usage examples
 
-## 🤝 Contributing
+## Contributing
 
 This is a complete, production-ready backend. Key areas for potential enhancement:
 - Real-time features (WebSocket integration)
@@ -250,10 +250,10 @@ This is a complete, production-ready backend. Key areas for potential enhancemen
 - Push notifications
 - Advanced AI features
 
-## 📄 License
+## License
 
 This project is provided as educational material for mobile app development.
 
 ---
 
-**Built with ❤️ for Mobile App Development Course**
+**Built for Mobile App Development Course**

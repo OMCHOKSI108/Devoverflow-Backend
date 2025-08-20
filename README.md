@@ -5,7 +5,7 @@ A complete Node.js backend API for a mobile Q&A application with AI integration.
 ## Features
 
 ### Core Functionality
-- **User Authentication** - Registration, login, email verification, JWT tokens
+- **User Authentication** - Registration, login, email verification, JWT tokens, password reset
 - **Questions & Answers** - Full CRUD operations with voting and search
 - **Comments System** - Add comments to questions and answers
 - **Bookmarks** - Save questions for later reference

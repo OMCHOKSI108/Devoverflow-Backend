@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema({
     // Email verification fields
     verificationToken: { type: String },
     verificationTokenExpires: { type: Date },
+
+    // Password reset fields
+    passwordResetToken: { type: String, default: null },
+    passwordResetExpires: { type: Date, default: null },
+    lastPasswordReset: { type: Date, default: null },
     emailVerifiedAt: { type: Date }
 }, { timestamps: true });
 export default mongoose.model('User', userSchema);

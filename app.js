@@ -1,5 +1,14 @@
 import 'dotenv/config';
 import express from 'express';
+
+// Check required environment variables
+if (!process.env.JWT_SECRET) {
+    console.error('⚠️ JWT_SECRET is not set in environment variables!');
+    process.exit(1);
+}
+
+// Log successful environment variable loading
+console.log('✅ Environment variables loaded successfully');
 import mongoose from 'mongoose';
 import path from 'path';
 // In ES modules, __dirname is not available by default. Use this workaround:

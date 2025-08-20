@@ -6,6 +6,9 @@ import User from '../models/User.js';
 
 // Generate JWT Token
 const generateToken = (id) => {
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET is not configured in environment variables');
+    }
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRE || '30d',
     });
@@ -25,8 +28,8 @@ const createTransporter = () => {
             rejectUnauthorized: false
         }
     },
-)
-    };
+    )
+};
 
 
 // @desc    Register a new user
@@ -124,25 +127,45 @@ export const register = async (req, res) => {
         }
 
         // Generate JWT token
-        const token = generateToken(user._id);
+        try {
+            const token = generateToken(user._id);
 
-        res.status(201).json({
-            success: true,
-            message: 'User registered successfully! Please check your email to verify your account.',
-            data: {
-                token,
-                user: {
-                    id: user._id,
-                    username: user.username,
-                    email: user.email,
-                    isVerified: user.isVerified,
-                    isAdmin: user.isAdmin,
-                    reputation: user.reputation
-                }
-            },
-            emailSent: true,
-            note: 'Please check your email inbox and spam folder for the verification link.'
-        });
+            res.status(201).json({
+                success: true,
+                message: 'User registered successfully! Please check your email to verify your account.',
+                data: {
+                    token,
+                    user: {
+                        id: user._id,
+                        username: user.username,
+                        email: user.email,
+                        isVerified: user.isVerified,
+                        isAdmin: user.isAdmin,
+                        reputation: user.reputation
+                    }
+                },
+                emailSent: true,
+                note: 'Please check your email inbox and spam folder for the verification link.'
+            });
+        } catch (tokenError) {
+            // If token generation fails, still send a success response but without token
+            res.status(201).json({
+                success: true,
+                message: 'User registered successfully! Please check your email to verify your account.',
+                data: {
+                    user: {
+                        id: user._id,
+                        username: user.username,
+                        email: user.email,
+                        isVerified: user.isVerified,
+                        isAdmin: user.isAdmin,
+                        reputation: user.reputation
+                    }
+                },
+                emailSent: true,
+                note: 'Please check your email inbox and spam folder for the verification link. You will need to log in after verification.'
+            });
+        }
 
     } catch (error) {
         console.error('Registration error:', error);

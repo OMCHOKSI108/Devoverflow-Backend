@@ -69,17 +69,14 @@ export const forgotPassword = async (req, res) => {
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
         // Send email
-        await sendEmail(
-            user.email,
-            'Password Reset Request',
-            `
+        const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #333;">Password Reset Request</h2>
                     <p>Hello,</p>
                     <p>You requested to reset your password. Click the button below to reset it:</p>
                     
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="\${resetUrl}" 
+                        <a href="${resetUrl}" 
                            style="background-color: #4CAF50; color: white; padding: 12px 25px; 
                                   text-decoration: none; border-radius: 5px; display: inline-block;">
                             Reset Password
@@ -88,7 +85,7 @@ export const forgotPassword = async (req, res) => {
                     
                     <p>Or copy and paste this link in your browser:</p>
                     <p style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
-                        \${resetUrl}
+                        ${resetUrl}
                     </p>
                     
                     <p><strong>Note:</strong> This link will expire in 1 hour.</p>
@@ -100,22 +97,26 @@ export const forgotPassword = async (req, res) => {
                         Best regards,<br>
                         DevOverflow Team
                     </p>
-                </div>
-            `
-        });
+                </div>`;
 
-    await res.json({
-        success: true,
-        message: 'If a user with this email exists, a password reset link will be sent.'
-    });
-} catch (error) {
-    console.error('Password reset request error:', error);
-    res.status(500).json({
-        success: false,
-        message: 'Error processing password reset request'
-    });
+        await sendEmail(
+            user.email,
+            'Password Reset Request',
+            emailHtml
+        );
+
+        await res.json({
+            success: true,
+            message: 'If a user with this email exists, a password reset link will be sent.'
+        });
+    } catch (error) {
+        console.error('Password reset request error:', error);
+        await res.status(500).json({
+            success: false,
+            message: 'Error processing password reset request'
+        });
+    }
 }
-};
 
 // @desc    Reset password with token
 // @route   POST /api/auth/reset-password

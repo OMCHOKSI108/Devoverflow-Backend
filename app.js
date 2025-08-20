@@ -959,7 +959,7 @@ app.get('/api/postman-guide', (req, res) => {
             'Export collections to share with team members',
             'Set up monitoring to check API health regularly',
             'Use mock servers for frontend development before backend is ready',
-            'Create documentation from your Postman collections',
+            'Create documentation from your Postman collections'
         ],
         troubleshooting: {
             commonIssues: [

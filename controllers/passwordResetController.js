@@ -79,7 +79,7 @@ export const forgotPassword = async (req, res) => {
                     <p>You requested to reset your password. Click the button below to reset it:</p>
                     
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="${resetUrl}" 
+                        <a href="\${resetUrl}" 
                            style="background-color: #4CAF50; color: white; padding: 12px 25px; 
                                   text-decoration: none; border-radius: 5px; display: inline-block;">
                             Reset Password
@@ -88,7 +88,7 @@ export const forgotPassword = async (req, res) => {
                     
                     <p>Or copy and paste this link in your browser:</p>
                     <p style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
-                        ${resetUrl}
+                        \${resetUrl}
                     </p>
                     
                     <p><strong>Note:</strong> This link will expire in 1 hour.</p>
@@ -104,11 +104,10 @@ export const forgotPassword = async (req, res) => {
             `
         });
 
-    res.json({
+    await res.json({
         success: true,
         message: 'If a user with this email exists, a password reset link will be sent.'
     });
-
 } catch (error) {
     console.error('Password reset request error:', error);
     res.status(500).json({

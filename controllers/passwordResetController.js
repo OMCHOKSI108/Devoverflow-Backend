@@ -69,11 +69,10 @@ export const forgotPassword = async (req, res) => {
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
         // Send email
-        const transporter = createTransporter();
-        await transporter.sendMail({
-            to: user.email,
-            subject: 'Password Reset Request',
-            html: `
+        await sendEmail(
+            user.email,
+            'Password Reset Request',
+            `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #333;">Password Reset Request</h2>
                     <p>Hello,</p>
@@ -105,18 +104,18 @@ export const forgotPassword = async (req, res) => {
             `
         });
 
-        res.json({
-            success: true,
-            message: 'If a user with this email exists, a password reset link will be sent.'
-        });
+    res.json({
+        success: true,
+        message: 'If a user with this email exists, a password reset link will be sent.'
+    });
 
-    } catch (error) {
-        console.error('Password reset request error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error processing password reset request'
-        });
-    }
+} catch (error) {
+    console.error('Password reset request error:', error);
+    res.status(500).json({
+        success: false,
+        message: 'Error processing password reset request'
+    });
+}
 };
 
 // @desc    Reset password with token
@@ -193,4 +192,4 @@ export const resetPassword = async (req, res) => {
 };
 
 // Import at the top of the file
-import { createTransporter } from './authController.js';
+import { sendEmail } from '../utils/emailService.js';

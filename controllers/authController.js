@@ -15,7 +15,7 @@ const generateToken = (id) => {
 };
 
 // Create email transporter
-const createTransporter = () => {
+export const createTransporter = () => {
     return nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
         port: process.env.EMAIL_PORT,

@@ -2,7 +2,7 @@
                     MOBILE Q&A APP - API ENDPOINTS DOCUMENTATION
 ================================================================================
 
-Base URL: http://localhost:3000/api
+Base URL: http://https://devoverflow-backend.onrender.com/api
 Version: 1.0.0
 Date: August 2, 2025
 

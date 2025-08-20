@@ -56,9 +56,9 @@ app.get('/', (req, res) => {
         version: '1.0.0',
         status: 'running',
         endpoints: {
-            documentation: 'http://localhost:3000/api/docs',
-            postmanGuide: 'http://localhost:3000/api/postman-guide',
-            apiBase: 'http://localhost:3000/api'
+            documentation: 'http://https://devoverflow-backend.onrender.com/api/docs',
+            postmanGuide: 'http://https://devoverflow-backend.onrender.com/api/postman-guide',
+            apiBase: 'http://https://devoverflow-backend.onrender.com/api'
         },
         features: [
             '✅ User Authentication (JWT)',
@@ -99,7 +99,7 @@ app.get('/api', (req, res) => {
         success: true,
         message: '🚀 Q&A Backend API - Available Endpoints',
         version: '1.0.0',
-        baseUrl: 'http://localhost:3000/api',
+        baseUrl: 'http://https://devoverflow-backend.onrender.com/api',
         documentation: {
             fullDocs: '/api/docs',
             postmanGuide: '/api/postman-guide',
@@ -329,7 +329,7 @@ app.get('/', (req, res) => {
         success: true,
         message: 'Q&A Backend API is running successfully!',
         version: '1.0.0',
-        baseUrl: 'http://localhost:3000/api',
+        baseUrl: 'http://https://devoverflow-backend.onrender.com/api',
         documentation: '/api/docs',
         endpoints: {
             auth: '/api/auth',
@@ -351,7 +351,7 @@ app.get('/api/docs', (req, res) => {
     res.status(200).json({
         title: 'Mobile Q&A App API Documentation',
         version: '1.0.0',
-        baseUrl: 'http://localhost:3000/api',
+        baseUrl: 'http://https://devoverflow-backend.onrender.com/api',
         authentication: {
             type: 'Bearer Token',
             header: 'Authorization: Bearer <your-jwt-token>',
@@ -710,12 +710,12 @@ app.get('/api/docs', (req, res) => {
 app.get('/api/postman-guide', (req, res) => {
     res.status(200).json({
         title: 'Postman Testing Guide - Mobile Q&A App API',
-        baseUrl: 'http://localhost:3000/api',
+        baseUrl: 'http://https://devoverflow-backend.onrender.com/api',
         instructions: {
             setup: [
                 '1. Download and install Postman from https://www.postman.com/',
                 '2. Create a new collection called "Q&A App API"',
-                '3. Set collection variables: baseUrl = http://localhost:3000/api',
+                '3. Set collection variables: baseUrl = http://https://devoverflow-backend.onrender.com/api',
                 '4. For protected routes, add Authorization header: Bearer {{token}}'
             ],
             workflow: [
@@ -909,7 +909,7 @@ app.get('/api/postman-guide', (req, res) => {
         },
         environmentVariables: {
             variables: {
-                baseUrl: 'http://localhost:3000/api',
+                baseUrl: 'http://https://devoverflow-backend.onrender.com/api',
                 token: 'your-jwt-token-here',
                 questionId: 'question-id-from-create-response',
                 answerId: 'answer-id-from-create-response',

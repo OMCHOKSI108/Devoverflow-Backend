@@ -360,7 +360,7 @@ jobs:
           
           # Health check
           sleep 15
-          curl -f http://localhost:3000/health || exit 1
+          curl -f http://https://devoverflow-backend.onrender.com/health || exit 1
           
           # Switch traffic to new version
           sudo ln -sfn $DEPLOY_ENV current
@@ -629,7 +629,7 @@ def deployToEnvironment(environment) {
         # Health check
         sleep 30
         kubectl exec deployment/${APP_NAME} --namespace=${environment} -- \
-            curl -f http://localhost:3000/health
+            curl -f http://https://devoverflow-backend.onrender.com/health
     """
 }
 ```
@@ -780,7 +780,7 @@ deploy-staging:
         docker-compose down
         docker-compose up -d
         sleep 15
-        curl -f http://localhost:3000/health || exit 1
+        curl -f http://https://devoverflow-backend.onrender.com/health || exit 1
       EOF
   environment:
     name: staging
@@ -903,7 +903,7 @@ USER nodejs
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://https://devoverflow-backend.onrender.com/health || exit 1
 
 # Start application
 CMD ["node", "dist/app.js"]

@@ -12,7 +12,7 @@
 2. Create a new environment called "Q&A Development"
 3. Add these variables:
    ```
-   baseUrl: http://localhost:3000/api
+   baseUrl: http://https://devoverflow-backend.onrender.com/api
    token: (will be set after login)
    adminToken: (will be set after admin login)
    adminEmail: (will be set after admin registration)
@@ -153,7 +153,7 @@ After registration, check your email inbox (and spam folder) for the verificatio
 #### 2.2 Verify Email Address
 - **Method**: GET
 - **URL**: Copy the verification link from your email
-  - Format: `http://localhost:3000/api/auth/verify/{your-verification-token}`
+  - Format: `http://https://devoverflow-backend.onrender.com/api/auth/verify/{your-verification-token}`
 - **Headers**: None needed (public endpoint)
 - **Expected Response**:
   ```json
@@ -236,7 +236,7 @@ After registration, check your email inbox (and spam folder) for the verificatio
 
 - **Method**: GET
 - **URL**: Copy the verification link from admin email
-  - Format: `http://localhost:3000/api/auth/verify/{admin-verification-token}`
+  - Format: `http://https://devoverflow-backend.onrender.com/api/auth/verify/{admin-verification-token}`
 - **Headers**: None needed (public endpoint)
 - **Expected Response**:
   ```json

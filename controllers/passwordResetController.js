@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import User from '../models/User.js';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 
 // Rate limiting configuration
 export const passwordResetLimiter = rateLimit({

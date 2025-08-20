@@ -46,7 +46,7 @@ on:
 
 env:
   NODE_VERSION: '18.x'
-  MONGODB_URI_TEST: 'mongodb://localhost:27017/qa_app_test'
+  MONGODB_URI_TEST: 'mongodb://devoverflow-backend.onrender.com/qa_app_test'
   JWT_SECRET: 'test_jwt_secret_key'
 
 jobs:
@@ -449,7 +449,7 @@ pipeline {
         NODE_VERSION = '18.x'
         DOCKER_REGISTRY = 'your-registry.com'
         APP_NAME = 'qa-app'
-        MONGODB_URI_TEST = 'mongodb://localhost:27017/qa_app_test'
+        MONGODB_URI_TEST = 'mongodb://devoverflow-backend.onrender.com/qa_app_test'
     }
     
     stages {

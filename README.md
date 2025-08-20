@@ -206,7 +206,7 @@ Key environment variables to configure:
 
 ```env
 # Database
-MONGO_URI=mongodb://localhost:27017/mobile_app_db
+MONGO_URI=mongodb://devoverflow-backend.onrender.com/mobile_app_db
 
 # JWT
 JWT_SECRET=your_super_secret_jwt_key

@@ -7,7 +7,8 @@ import {
     verifyEmail,
     getMe,
     updateProfile,
-    setupAdmin
+    setupAdmin,
+    resendVerification
 } from '../controllers/authController.js';
 import {
     forgotPassword,
@@ -21,6 +22,7 @@ router.post('/register', register);
 router.post('/register-admin', registerAdmin); // Admin registration endpoint
 router.post('/login', login);
 router.get('/verify/:token', verifyEmail);
+router.post('/resend-verification', resendVerification);
 router.post('/setup-admin', setupAdmin); // TEMPORARY - remove in production
 
 // Password Reset routes

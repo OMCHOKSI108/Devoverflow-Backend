@@ -510,6 +510,25 @@ export const login = async (req, res) => {
             });
         }
 
+        // Check if user is verified
+        if (!user.isVerified) {
+            return res.status(403).json({
+                success: false,
+                message: 'Please verify your email address before logging in.',
+                suggestion: 'Check your email for the verification link or use the resend verification endpoint.',
+                nextSteps: [
+                    'Check your email inbox and spam folder for the verification link',
+                    'Use POST /api/auth/resend-verification to resend verification email',
+                    'Click the verification link to activate your account'
+                ],
+                user: {
+                    email: user.email,
+                    username: user.username,
+                    isVerified: user.isVerified
+                }
+            });
+        }
+
         // Generate JWT token
         const token = generateToken(user._id);
 

@@ -1,0 +1,537 @@
+# AI APIs Testing Guide for Postman - Mobile Q&A App
+
+## 🚀 Overview
+This guide provides step-by-step instructions for testing all AI-powered features in the Mobile Q&A App using Postman. The AI system uses Google's Gemini 1.5 Flash model for various intelligent features.
+
+## 📋 Prerequisites
+1. Postman installed and configured
+2. Server running on `http://https://devoverflow-backend.onrender.com/api`
+3. User account registered and logged in (for private endpoints)
+4. JWT token saved in Postman environment variables
+
+## 🔧 Environment Setup
+Create environment variables in Postman:
+```
+baseUrl: http://https://devoverflow-backend.onrender.com/api
+token: your-jwt-token-here
+questionId: (will be set after creating questions)
+```
+
+## 🤖 AI Endpoints Overview
+
+### 1. AI Status Check (Public)
+**Endpoint:** `GET /api/ai/status`
+**Purpose:** Check if AI service is operational
+**Access:** Public (no authentication required)
+
+#### Postman Configuration:
+- **Method:** GET
+- **URL:** `{{baseUrl}}/ai/status`
+- **Headers:** None required
+- **Body:** None
+
+#### Expected Response:
+```json
+{
+    "success": true,
+    "status": "AI operational",
+    "model": "gemini-1.5-flash",
+    "configured": true
+}
+```
+
+#### Test Script:
+```javascript
+pm.test("AI status check successful", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson.success).to.eql(true);
+    pm.expect(responseJson.status).to.eql("AI operational");
+    pm.expect(responseJson.model).to.eql("gemini-1.5-flash");
+});
+```
+
+---
+
+**Endpoint:** `POST /api/ai/answer-suggestion`
+**Purpose:** Get AI-generated answer suggestions for programming questions
+**Access:** Private (requires JWT token)
+
+#### Postman Configuration:
+- **Method:** POST
+- **URL:** `{{baseUrl}}/ai/answer-suggestion`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "questionTitle": "How to implement JWT authentication in Node.js?",
+    "questionBody": "I am building a REST API and need to implement secure authentication using JSON Web Tokens. Can someone guide me through the process? I want to understand the best practices for token generation, verification, and storage.",
+    "tags": ["nodejs", "jwt", "authentication", "security"]
+  }
+  ```
+
+#### Alternative Test Cases:
+
+**Test Case 1: React Performance**
+```json
+{
+  "questionTitle": "How to optimize React app performance?",
+  "questionBody": "My React application is running slowly with large lists and complex components. What are the best optimization techniques I should implement?",
+  "tags": ["react", "performance", "optimization"]
+}
+```
+
+**Test Case 2: Database Design**
+```json
+{
+  "questionTitle": "MongoDB schema design best practices",
+  "questionBody": "I'm designing a MongoDB schema for a social media application. What are the key considerations for user profiles, posts, and relationships?",
+  "tags": ["mongodb", "database", "schema", "design"]
+}
+```
+
+**Test Case 3: API Development**
+```json
+{
+  "questionTitle": "REST API error handling strategies",
+  "questionBody": "What are the best practices for implementing comprehensive error handling in a REST API built with Express.js?",
+  "tags": ["api", "expressjs", "error-handling", "best-practices"]
+}
+```
+
+#### Expected Response:
+```json
+{
+    "success": true,
+    "data": {
+        "suggestion": "Here's a comprehensive guide to implementing JWT authentication in Node.js:\n\n## 1. Installation\nFirst, install the necessary packages:\n\n```bash\nnpm install jsonwebtoken bcryptjs express\n```\n\n## 2. Basic JWT Implementation\n\n```javascript\nconst jwt = require('jsonwebtoken');\nconst bcrypt = require('bcryptjs');\n\n// Generate token\nconst generateToken = (userId) => {\n  return jwt.sign(\n    { userId },\n    process.env.JWT_SECRET,\n    { expiresIn: '7d' }\n  );\n};\n\n// Verify token\nconst verifyToken = (token) => {\n  try {\n    return jwt.verify(token, process.env.JWT_SECRET);\n  } catch (error) {\n    return null;\n  }\n};\n```\n\n## 3. Best Practices\n\n- Store JWT secret securely in environment variables\n- Set appropriate expiration times\n- Include only necessary data in the payload\n- Use HTTPS in production\n- Implement token refresh mechanism\n- Validate tokens on protected routes\n\nThis approach provides a solid foundation for secure authentication in your Node.js application.",
+        "confidence": "high",
+        "model": "gemini-1.5-flash"
+    }
+}
+```
+
+#### Test Script:
+```javascript
+pm.test("AI answer suggestion successful", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson.success).to.eql(true);
+    pm.expect(responseJson.data).to.have.property('suggestion');
+    pm.expect(responseJson.data).to.have.property('confidence');
+    pm.expect(responseJson.data.model).to.eql("gemini-1.5-flash");
+    
+    // Check that suggestion is not empty
+    pm.expect(responseJson.data.suggestion).to.be.a('string');
+    pm.expect(responseJson.data.suggestion.length).to.be.greaterThan(0);
+});
+```
+
+---
+
+### 3. AI Tag Suggestions (Private)
+**Endpoint:** `POST /api/ai/tag-suggestions`
+**Purpose:** Get AI-generated tag suggestions for questions
+**Access:** Private (requires JWT token)
+
+#### Postman Configuration:
+- **Method:** POST
+- **URL:** `{{baseUrl}}/ai/tag-suggestions`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "questionTitle": "How to implement user authentication in a React app?",
+    "questionBody": "I'm building a React application and need to implement user authentication. Should I use Firebase Auth, Auth0, or build my own solution? What are the pros and cons of each approach?"
+  }
+  ```
+
+#### Alternative Test Cases:
+
+**Test Case 1: Mobile Development**
+```json
+{
+  "questionTitle": "React Native state management solutions",
+  "questionBody": "What are the best state management libraries for React Native applications? I'm working on a complex app with multiple screens and data flows."
+}
+```
+
+**Test Case 2: Backend Development**
+```json
+{
+  "questionTitle": "Microservices communication patterns",
+  "questionBody": "I'm designing a microservices architecture and need to choose between synchronous HTTP calls, message queues, and event-driven communication. What are the trade-offs?"
+}
+```
+
+#### Expected Response:
+```json
+{
+    "success": true,
+    "data": {
+        "suggestedTags": [
+            "react",
+            "authentication",
+            "firebase",
+            "auth0",
+            "frontend",
+            "security"
+        ],
+        "model": "gemini-1.5-flash"
+    }
+}
+```
+
+#### Test Script:
+```javascript
+pm.test("AI tag suggestions successful", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson.success).to.eql(true);
+    pm.expect(responseJson.data).to.have.property('suggestedTags');
+    pm.expect(responseJson.data.suggestedTags).to.be.an('array');
+    pm.expect(responseJson.data.suggestedTags.length).to.be.greaterThan(0);
+    
+    // Check that tags are strings and not empty
+    responseJson.data.suggestedTags.forEach(tag => {
+        pm.expect(tag).to.be.a('string');
+        pm.expect(tag.length).to.be.greaterThan(0);
+    });
+});
+```
+
+---
+
+### 4. AI Chatbot (Private)
+**Endpoint:** `POST /api/ai/chatbot`
+**Purpose:** Interactive AI chatbot for programming help
+**Access:** Private (requires JWT token)
+
+#### Postman Configuration:
+- **Method:** POST
+- **URL:** `{{baseUrl}}/ai/chatbot`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "message": "How do I create a responsive navigation bar in CSS?",
+    "context": "I'm working on a React project and need help with CSS styling"
+  }
+  ```
+
+#### Alternative Test Cases:
+
+**Test Case 1: Code Review**
+```json
+{
+  "message": "Can you review this JavaScript function and suggest improvements?",
+  "context": "function calculateTotal(items) { let total = 0; for(let i = 0; i < items.length; i++) { total += items[i].price * items[i].quantity; } return total; }"
+}
+```
+
+**Test Case 2: Debugging Help**
+```json
+{
+  "message": "My Express.js app is throwing 'Cannot read property' errors. How can I debug this?",
+  "context": "Node.js backend application with MongoDB"
+}
+```
+
+**Test Case 3: Best Practices**
+```json
+{
+  "message": "What are the best practices for organizing React components in a large application?",
+  "context": "Large-scale React application with multiple teams"
+}
+```
+
+#### Expected Response:
+```json
+{
+    "success": true,
+    "data": {
+        "response": "Creating a responsive navigation bar in CSS is essential for modern web development. Here's a comprehensive approach:\n\n## HTML Structure\n```html\n<nav class=\"navbar\">\n  <div class=\"nav-container\">\n    <div class=\"nav-logo\">\n      <a href=\"#\">Your Logo</a>\n    </div>\n    <ul class=\"nav-menu\">\n      <li class=\"nav-item\"><a href=\"#\">Home</a></li>\n      <li class=\"nav-item\"><a href=\"#\">About</a></li>\n      <li class=\"nav-item\"><a href=\"#\">Services</a></li>\n      <li class=\"nav-item\"><a href=\"#\">Contact</a></li>\n    </ul>\n    <div class=\"hamburger\">\n      <span class=\"bar\"></span>\n      <span class=\"bar\"></span>\n      <span class=\"bar\"></span>\n    </div>\n  </div>\n</nav>\n```\n\n## CSS Styling\n```css\n.navbar {\n  background: #333;\n  padding: 1rem 0;\n  position: fixed;\n  width: 100%;\n  top: 0;\n  z-index: 1000;\n}\n\n.nav-container {\n  max-width: 1200px;\n  margin: 0 auto;\n  padding: 0 2rem;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n}\n\n.nav-menu {\n  display: flex;\n  list-style: none;\n  margin: 0;\n  padding: 0;\n}\n\n.nav-item {\n  margin-left: 2rem;\n}\n\n.nav-item a {\n  color: white;\n  text-decoration: none;\n  padding: 0.5rem 1rem;\n  transition: background 0.3s ease;\n}\n\n.nav-item a:hover {\n  background: #555;\n  border-radius: 4px;\n}\n\n/* Mobile Styles */\n@media screen and (max-width: 768px) {\n  .nav-menu {\n    position: fixed;\n    left: -100%;\n    top: 70px;\n    flex-direction: column;\n    background-color: #333;\n    width: 100%;\n    text-align: center;\n    transition: 0.3s;\n    box-shadow: 0 10px 27px rgba(0, 0, 0, 0.05);\n  }\n  \n  .nav-menu.active {\n    left: 0;\n  }\n  \n  .nav-item {\n    margin: 2.5rem 0;\n  }\n}\n```\n\nThis creates a modern, responsive navigation bar that works well on both desktop and mobile devices. The key features include:\n\n1. **Fixed positioning** for consistent navigation\n2. **Mobile-first approach** with hamburger menu\n3. **Smooth transitions** for better UX\n4. **Flexible layout** that adapts to different screen sizes\n\nFor the hamburger menu functionality, you'll need to add some JavaScript to toggle the 'active' class on the nav-menu.",
+        "timestamp": "2025-08-29T10:30:00.000Z",
+        "model": "gemini-1.5-flash"
+    }
+}
+```
+
+#### Test Script:
+```javascript
+pm.test("AI chatbot response successful", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson.success).to.eql(true);
+    pm.expect(responseJson.data).to.have.property('response');
+    pm.expect(responseJson.data).to.have.property('timestamp');
+    pm.expect(responseJson.data.model).to.eql("gemini-1.5-flash");
+    
+    // Check that response is meaningful
+    pm.expect(responseJson.data.response).to.be.a('string');
+    pm.expect(responseJson.data.response.length).to.be.greaterThan(10);
+});
+```
+
+---
+
+### 5. AI Question Improvements (Private)
+**Endpoint:** `POST /api/ai/question-improvements`
+**Purpose:** Get AI suggestions for improving question quality
+**Access:** Private (requires JWT token)
+
+#### Postman Configuration:
+- **Method:** POST
+- **URL:** `{{baseUrl}}/ai/question-improvements`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "questionTitle": "help with code",
+    "questionBody": "my code not working pls help",
+    "tags": ["javascript"]
+  }
+  ```
+
+#### Alternative Test Cases:
+
+**Test Case 1: Vague Question**
+```json
+{
+  "questionTitle": "API not working",
+  "questionBody": "I have an API that doesn't work. What should I do?",
+  "tags": ["api"]
+}
+```
+
+**Test Case 2: Code-Only Question**
+```json
+{
+  "questionTitle": "Fix this code",
+  "questionBody": "function test() { console.log('hello') }",
+  "tags": ["javascript"]
+}
+```
+
+#### Expected Response:
+```json
+{
+    "success": true,
+    "data": {
+        "improvements": "## Question Quality Analysis and Improvement Suggestions\n\n### Current Issues:\n1. **Title is too vague** - \"help with code\" doesn't describe the specific problem\n2. **Body lacks detail** - No information about what the code should do or what's wrong\n3. **Missing context** - No error messages, expected vs actual behavior\n4. **Insufficient technical details** - No code snippets, environment info, or debugging attempts\n\n### Suggested Improvements:\n\n#### Better Title Options:\n- \"JavaScript function not executing as expected\"\n- \"Console.log not working in my JavaScript code\"\n- \"JavaScript function runs but produces no output\"\n\n#### Improved Question Body:\n```\nI'm trying to create a simple JavaScript function that should log 'hello' to the console, but it's not working. Here's what I've tried:\n\n```javascript\nfunction test() {\n  console.log('hello');\n}\n\ntest(); // calling the function\n```\n\n**Expected behavior:** Should see 'hello' in the browser console\n**Actual behavior:** Nothing appears in the console\n\n**Environment:**\n- Browser: Chrome 91\n- JavaScript environment: Browser console\n- No errors in browser dev tools\n\n**What I've tried:**\n- Checked browser console settings\n- Verified JavaScript is enabled\n- Tried different browsers\n- Cleared browser cache\n\nWhat could be causing this issue?\n```\n\n### Key Elements for a Good Question:\n1. **Clear, specific title** that summarizes the problem\n2. **Detailed description** of what you're trying to achieve\n3. **Complete code examples** with proper formatting\n4. **Expected vs actual behavior**\n5. **Environment details** (browser, Node.js version, etc.)\n6. **Error messages** (if any)\n7. **What you've already tried**\n8. **Proper tags** that match your technology stack\n\n### Additional Suggestions:\n- Include relevant error messages or screenshots\n- Mention your skill level (beginner, intermediate, etc.)\n- Specify if this is for a specific framework or library\n- Add any constraints or requirements\n\nThis improved question will be much more likely to get helpful responses from the community!",
+        "model": "gemini-1.5-flash"
+    }
+}
+```
+
+#### Test Script:
+```javascript
+pm.test("AI question improvements successful", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson.success).to.eql(true);
+    pm.expect(responseJson.data).to.have.property('improvements');
+    pm.expect(responseJson.data.improvements).to.be.a('string');
+    pm.expect(responseJson.data.improvements.length).to.be.greaterThan(50);
+});
+```
+
+---
+
+### 6. AI Similar Questions (Public)
+**Endpoint:** `POST /api/ai/similar-questions`
+**Purpose:** Generate similar question suggestions based on a given question
+**Access:** Public (no authentication required)
+
+#### Postman Configuration:
+- **Method:** POST
+- **URL:** `{{baseUrl}}/ai/similar-questions`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "questionTitle": "How to implement JWT authentication in Node.js?",
+    "questionBody": "I need to add secure user authentication to my Node.js REST API using JWT tokens."
+  }
+  ```
+
+#### Alternative Test Cases:
+
+**Test Case 1: React Development**
+```json
+{
+  "questionTitle": "React component not re-rendering",
+  "questionBody": "My React component isn't updating when the state changes. I've tried useState and useEffect but it's still not working."
+}
+```
+
+**Test Case 2: Database Issues**
+```json
+{
+  "questionTitle": "MongoDB connection timeout",
+  "questionBody": "I'm getting connection timeout errors when trying to connect to MongoDB from my Node.js application."
+}
+```
+
+#### Expected Response:
+```json
+{
+    "success": true,
+    "data": {
+        "similarQuestions": [
+            "Best practices for JWT token storage in web applications",
+            "How to handle JWT token expiration and refresh",
+            "Implementing role-based authentication with JWT in Node.js",
+            "JWT vs session-based authentication: which to choose?",
+            "How to secure JWT tokens against common vulnerabilities"
+        ],
+        "model": "gemini-1.5-flash"
+    }
+}
+```
+
+#### Test Script:
+```javascript
+pm.test("AI similar questions successful", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson.success).to.eql(true);
+    pm.expect(responseJson.data).to.have.property('similarQuestions');
+    pm.expect(responseJson.data.similarQuestions).to.be.an('array');
+    pm.expect(responseJson.data.similarQuestions.length).to.be.greaterThan(0);
+    
+    // Check that questions are strings
+    responseJson.data.similarQuestions.forEach(question => {
+        pm.expect(question).to.be.a('string');
+        pm.expect(question.length).to.be.greaterThan(5);
+    });
+});
+```
+
+---
+
+## 🧪 Complete Testing Workflow
+
+### Phase 1: Setup and Authentication
+1. Register a user account
+2. Login to get JWT token
+3. Save token in Postman environment
+
+### Phase 2: Test Public Endpoints
+1. Test AI Status Check
+2. Test Similar Questions Generation
+
+### Phase 3: Test Private Endpoints
+1. Test Answer Suggestions (use different programming topics)
+2. Test Tag Suggestions (use various question types)
+3. Test Chatbot (ask different programming questions)
+4. Test Question Improvements (use poorly written questions)
+
+### Phase 4: Error Testing
+Test error scenarios:
+- Missing authentication token
+- Invalid request body
+- AI service not configured
+- Empty or invalid input data
+
+---
+
+## 🔧 Error Handling Examples
+
+### Missing Authentication
+```json
+{
+    "success": false,
+    "message": "No token provided"
+}
+```
+
+### Invalid Request Body
+```json
+{
+    "success": false,
+    "message": "Please provide question title and body"
+}
+```
+
+### AI Service Not Configured
+```json
+{
+    "success": false,
+    "message": "AI service not configured"
+}
+```
+
+---
+
+## 📊 Performance Testing
+
+### Response Time Expectations:
+- AI Status: < 100ms
+- Similar Questions: < 2 seconds
+- Other AI features: < 5 seconds (depending on complexity)
+
+### Rate Limiting:
+- Implement appropriate delays between requests
+- Monitor for rate limiting responses
+
+---
+
+## 🎯 Success Criteria
+
+After testing all endpoints, you should have:
+- ✅ AI status check working
+- ✅ Answer suggestions generated for multiple topics
+- ✅ Tag suggestions provided
+- ✅ Chatbot responses received
+- ✅ Question improvement suggestions
+- ✅ Similar questions generated
+- ✅ Proper error handling verified
+- ✅ Authentication working correctly
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues:
+1. **Token expired**: Re-login and update token
+2. **AI service down**: Check GEMINI_API_KEY configuration
+3. **Rate limiting**: Add delays between requests
+4. **Invalid responses**: Verify request body format
+
+### Debug Tips:
+- Check server logs for detailed error messages
+- Use Postman Console to inspect requests/responses
+- Verify environment variables are set correctly
+- Test with simple inputs first
+
+---
+
+## 📝 Notes
+
+- All AI responses are generated by Google's Gemini 1.5 Flash model
+- Private endpoints require valid JWT authentication
+- AI features may have usage limits based on API quotas
+- Response times may vary based on input complexity
+- All responses include model information for transparency
+
+This comprehensive guide ensures thorough testing of all AI-powered features in your Mobile Q&A application!

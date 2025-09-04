@@ -579,12 +579,12 @@ export const getAdminStats = async (req, res) => {
     }
 };
 
-// @desc    Manage user (ban/unban, promote/demote)
+// @desc    Manage user (ban/unban, promote/demote, verify/unverify, suspend/unsuspend)
 // @route   PUT /api/admin/users/:id
 // @access  Private (Admin only)
 export const manageUser = async (req, res) => {
     try {
-        const { action } = req.body; // 'ban', 'unban', 'promote', 'demote'
+        const { action, data } = req.body; // action: 'ban', 'unban', 'promote', 'demote', 'verify', 'unverify', 'suspend', 'unsuspend'
         const userId = req.params.id;
 
         const user = await User.findById(userId);
@@ -596,29 +596,62 @@ export const manageUser = async (req, res) => {
             });
         }
 
-        // Prevent self-modification
-        if (userId === req.user.id) {
+        // Prevent self-modification for critical actions
+        if (userId === req.user.id && ['delete', 'ban', 'suspend'].includes(action)) {
             return res.status(400).json({
                 success: false,
-                message: 'Cannot modify your own account'
+                message: 'Cannot perform this action on your own account'
             });
         }
+
+        let message = '';
+        let updatedUser = null;
 
         switch (action) {
             case 'promote':
                 user.isAdmin = true;
+                message = 'User promoted to admin successfully';
                 break;
             case 'demote':
                 user.isAdmin = false;
+                message = 'User demoted from admin successfully';
+                break;
+            case 'verify':
+                user.isVerified = true;
+                user.emailVerifiedAt = new Date();
+                message = 'User verified successfully';
+                break;
+            case 'unverify':
+                user.isVerified = false;
+                user.emailVerifiedAt = null;
+                message = 'User verification removed successfully';
                 break;
             case 'ban':
-                // In a real app, you might add an 'isBanned' field
-                // For now, we'll just set reputation to 0
                 user.reputation = 0;
+                user.isVerified = false;
+                message = 'User banned successfully';
                 break;
             case 'unban':
-                // Restore some reputation
                 user.reputation = 10;
+                message = 'User unbanned successfully';
+                break;
+            case 'suspend':
+                // Add a suspended field if it doesn't exist
+                user.isSuspended = true;
+                user.suspendedAt = new Date();
+                message = 'User suspended successfully';
+                break;
+            case 'unsuspend':
+                user.isSuspended = false;
+                user.suspendedAt = null;
+                message = 'User unsuspended successfully';
+                break;
+            case 'reset_password':
+                // In a real app, you'd send a password reset email
+                // For now, we'll just mark the user as needing password reset
+                user.passwordResetToken = 'admin-reset-' + Date.now();
+                user.passwordResetExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+                message = 'Password reset initiated for user';
                 break;
             default:
                 return res.status(400).json({
@@ -628,11 +661,12 @@ export const manageUser = async (req, res) => {
         }
 
         await user.save();
+        updatedUser = await User.findById(userId).select('-password');
 
         res.status(200).json({
             success: true,
-            message: `User ${action}ed successfully`,
-            data: { user: user.select('-password') }
+            message,
+            data: { user: updatedUser }
         });
 
     } catch (error) {
@@ -640,6 +674,615 @@ export const manageUser = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server error managing user'
+        });
+    }
+};
+
+// @desc    Delete user permanently
+// @route   DELETE /api/admin/users/:id
+// @access  Private (Admin only)
+export const deleteUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Prevent self-deletion
+        if (userId === req.user.id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot delete your own account'
+            });
+        }
+
+        // Delete all related content
+        await Question.deleteMany({ user: userId });
+        await Answer.deleteMany({ user: userId });
+        await Comment.deleteMany({ user: userId });
+
+        // Remove from other users' following/followers lists
+        await User.updateMany(
+            { following: userId },
+            { $pull: { following: userId } }
+        );
+        await User.updateMany(
+            { followers: userId },
+            { $pull: { followers: userId } }
+        );
+
+        // Delete the user
+        await User.findByIdAndDelete(userId);
+
+        res.status(200).json({
+            success: true,
+            message: 'User and all associated content deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error deleting user'
+        });
+    }
+};
+
+// @desc    Update user details
+// @route   PUT /api/admin/users/:id/details
+// @access  Private (Admin only)
+export const updateUserDetails = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { username, email, fullName, bio, location, website, reputation, isVerified, isAdmin } = req.body;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Update allowed fields
+        if (username) user.username = username;
+        if (email) user.email = email;
+        if (fullName !== undefined) user.profile.fullName = fullName;
+        if (bio !== undefined) user.profile.bio = bio;
+        if (location !== undefined) user.profile.location = location;
+        if (website !== undefined) user.profile.website = website;
+        if (reputation !== undefined) user.reputation = reputation;
+        if (isVerified !== undefined) user.isVerified = isVerified;
+        if (isAdmin !== undefined) user.isAdmin = isAdmin;
+
+        await user.save();
+
+        const updatedUser = await User.findById(userId).select('-password');
+
+        res.status(200).json({
+            success: true,
+            message: 'User details updated successfully',
+            data: { user: updatedUser }
+        });
+
+    } catch (error) {
+        console.error('Update user details error:', error);
+
+        // Handle duplicate key errors
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyValue)[0];
+            return res.status(400).json({
+                success: false,
+                message: `${field} already exists`
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating user details'
+        });
+    }
+};
+
+// @desc    Get all users (Admin only)
+// @route   GET /api/admin/users
+// @access  Private/Admin
+export const getAllUsers = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const search = req.query.search || '';
+        const role = req.query.role || 'all';
+        const status = req.query.status || 'all';
+        const sortBy = req.query.sortBy || 'createdAt';
+        const order = req.query.order === 'asc' ? 1 : -1;
+
+        // Build search query
+        let searchQuery = {};
+
+        // Search by username, email, or name
+        if (search) {
+            searchQuery.$or = [
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { name: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Filter by role
+        if (role !== 'all') {
+            searchQuery.role = role;
+        }
+
+        // Filter by status (you might want to add an 'isActive' field to User model)
+        if (status === 'active') {
+            searchQuery.isActive = { $ne: false };
+        } else if (status === 'inactive') {
+            searchQuery.isActive = false;
+        }
+
+        // Calculate pagination
+        const skip = (page - 1) * limit;
+
+        // Get total count for pagination
+        const totalUsers = await User.countDocuments(searchQuery);
+
+        // Get users with sorting and pagination
+        const users = await User.find(searchQuery)
+            .select('-password') // Exclude password field
+            .sort({ [sortBy]: order })
+            .skip(skip)
+            .limit(limit)
+            .populate('bookmarks', 'title createdAt');
+
+        // Get user statistics for each user
+        const usersWithStats = await Promise.all(
+            users.map(async (user) => {
+                const questionsCount = await Question.countDocuments({ user: user._id });
+                const answersCount = await Answer.countDocuments({ user: user._id });
+                const acceptedAnswersCount = await Answer.countDocuments({
+                    user: user._id,
+                    isAccepted: true
+                });
+
+                return {
+                    ...user.toObject(),
+                    stats: {
+                        questionsAsked: questionsCount,
+                        answersGiven: answersCount,
+                        acceptedAnswers: acceptedAnswersCount,
+                        reputation: user.reputation,
+                        badges: user.badges || [],
+                        joinedDate: user.createdAt
+                    }
+                };
+            })
+        );
+
+        // Calculate pagination info
+        const totalPages = Math.ceil(totalUsers / limit);
+        const hasNextPage = page < totalPages;
+        const hasPrevPage = page > 1;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                users: usersWithStats,
+                pagination: {
+                    currentPage: page,
+                    totalPages,
+                    totalUsers,
+                    hasNextPage,
+                    hasPrevPage,
+                    limit
+                },
+                filters: {
+                    search,
+                    role,
+                    status,
+                    sortBy,
+                    order: order === 1 ? 'asc' : 'desc'
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Get all users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error retrieving users'
+        });
+    }
+};
+
+// @desc    Edit question as admin
+// @route   PUT /api/admin/questions/:id
+// @access  Private (Admin only)
+export const editQuestionAsAdmin = async (req, res) => {
+    try {
+        const { title, content, tags, status } = req.body;
+        const questionId = req.params.id;
+
+        const question = await Question.findById(questionId).populate('user', 'username email');
+
+        if (!question) {
+            return res.status(404).json({
+                success: false,
+                message: 'Question not found'
+            });
+        }
+
+        // Update question fields
+        if (title !== undefined) question.title = title;
+        if (content !== undefined) question.content = content;
+        if (tags !== undefined) question.tags = tags;
+        if (status !== undefined) question.status = status;
+
+        question.updatedAt = new Date();
+
+        await question.save();
+
+        // Populate user data for response
+        await question.populate('user', 'username email');
+
+        res.status(200).json({
+            success: true,
+            message: 'Question updated successfully',
+            data: question
+        });
+
+    } catch (error) {
+        console.error('Edit question error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating question'
+        });
+    }
+};
+
+// @desc    Edit answer as admin
+// @route   PUT /api/admin/answers/:id
+// @access  Private (Admin only)
+export const editAnswerAsAdmin = async (req, res) => {
+    try {
+        const { content, isAccepted } = req.body;
+        const answerId = req.params.id;
+
+        const answer = await Answer.findById(answerId)
+            .populate('user', 'username email')
+            .populate('question', 'title');
+
+        if (!answer) {
+            return res.status(404).json({
+                success: false,
+                message: 'Answer not found'
+            });
+        }
+
+        // Update answer fields
+        if (content !== undefined) answer.content = content;
+        if (isAccepted !== undefined) {
+            answer.isAccepted = isAccepted;
+            // If marking as accepted, unmark other answers for this question
+            if (isAccepted) {
+                await Answer.updateMany(
+                    { question: answer.question, _id: { $ne: answerId } },
+                    { isAccepted: false }
+                );
+            }
+        }
+
+        answer.updatedAt = new Date();
+
+        await answer.save();
+
+        // Populate data for response
+        await answer.populate('user', 'username email');
+        await answer.populate('question', 'title');
+
+        res.status(200).json({
+            success: true,
+            message: 'Answer updated successfully',
+            data: answer
+        });
+
+    } catch (error) {
+        console.error('Edit answer error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating answer'
+        });
+    }
+};
+
+// @desc    Add comment as admin
+// @route   POST /api/admin/comments
+// @access  Private (Admin only)
+export const addCommentAsAdmin = async (req, res) => {
+    try {
+        const { content, contentType, contentId } = req.body;
+
+        if (!content || !contentType || !contentId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Content, contentType, and contentId are required'
+            });
+        }
+
+        // Verify the content exists
+        let contentExists = false;
+        if (contentType === 'question') {
+            contentExists = await Question.findById(contentId);
+        } else if (contentType === 'answer') {
+            contentExists = await Answer.findById(contentId);
+        }
+
+        if (!contentExists) {
+            return res.status(404).json({
+                success: false,
+                message: `${contentType} not found`
+            });
+        }
+
+        const comment = new Comment({
+            content,
+            user: req.user.id,
+            contentType,
+            contentId,
+            isAdminComment: true
+        });
+
+        await comment.save();
+
+        // Populate user data
+        await comment.populate('user', 'username email isAdmin');
+
+        res.status(201).json({
+            success: true,
+            message: 'Comment added successfully',
+            data: comment
+        });
+
+    } catch (error) {
+        console.error('Add comment error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error adding comment'
+        });
+    }
+};
+
+// @desc    Edit comment as admin
+// @route   PUT /api/admin/comments/:id
+// @access  Private (Admin only)
+export const editCommentAsAdmin = async (req, res) => {
+    try {
+        const { content } = req.body;
+        const commentId = req.params.id;
+
+        const comment = await Comment.findById(commentId).populate('user', 'username email');
+
+        if (!comment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Comment not found'
+            });
+        }
+
+        // Update comment content
+        if (content !== undefined) comment.content = content;
+        comment.updatedAt = new Date();
+
+        await comment.save();
+
+        // Populate user data for response
+        await comment.populate('user', 'username email');
+
+        res.status(200).json({
+            success: true,
+            message: 'Comment updated successfully',
+            data: comment
+        });
+
+    } catch (error) {
+        console.error('Edit comment error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating comment'
+        });
+    }
+};
+
+// @desc    Delete comment as admin
+// @route   DELETE /api/admin/comments/:id
+// @access  Private (Admin only)
+export const deleteCommentAsAdmin = async (req, res) => {
+    try {
+        const commentId = req.params.id;
+
+        const comment = await Comment.findById(commentId);
+
+        if (!comment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Comment not found'
+            });
+        }
+
+        await Comment.findByIdAndDelete(commentId);
+
+        res.status(200).json({
+            success: true,
+            message: 'Comment deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete comment error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error deleting comment'
+        });
+    }
+};
+
+// @desc    Get all questions for admin management
+// @route   GET /api/admin/questions
+// @access  Private (Admin only)
+export const getAllQuestionsAsAdmin = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const search = req.query.search || '';
+        const status = req.query.status;
+        const sortBy = req.query.sortBy || 'createdAt';
+        const order = req.query.order === 'asc' ? 1 : -1;
+        const skip = (page - 1) * limit;
+
+        // Build filter
+        let filter = {};
+        if (status && status !== 'all') filter.status = status;
+        if (search) {
+            filter.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { content: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const questions = await Question.find(filter)
+            .populate('user', 'username email isAdmin')
+            .sort({ [sortBy]: order })
+            .skip(skip)
+            .limit(limit);
+
+        const totalQuestions = await Question.countDocuments(filter);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                questions,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalQuestions / limit),
+                    totalQuestions,
+                    hasNextPage: page < Math.ceil(totalQuestions / limit),
+                    hasPrevPage: page > 1
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Get all questions error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error retrieving questions'
+        });
+    }
+};
+
+// @desc    Get all answers for admin management
+// @route   GET /api/admin/answers
+// @access  Private (Admin only)
+export const getAllAnswersAsAdmin = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const search = req.query.search || '';
+        const sortBy = req.query.sortBy || 'createdAt';
+        const order = req.query.order === 'asc' ? 1 : -1;
+        const skip = (page - 1) * limit;
+
+        // Build filter
+        let filter = {};
+        if (search) {
+            filter.$or = [
+                { content: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const answers = await Answer.find(filter)
+            .populate('user', 'username email isAdmin')
+            .populate('question', 'title')
+            .sort({ [sortBy]: order })
+            .skip(skip)
+            .limit(limit);
+
+        const totalAnswers = await Answer.countDocuments(filter);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                answers,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalAnswers / limit),
+                    totalAnswers,
+                    hasNextPage: page < Math.ceil(totalAnswers / limit),
+                    hasPrevPage: page > 1
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Get all answers error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error retrieving answers'
+        });
+    }
+};
+
+// @desc    Get all comments for admin management
+// @route   GET /api/admin/comments
+// @access  Private (Admin only)
+export const getAllCommentsAsAdmin = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const search = req.query.search || '';
+        const sortBy = req.query.sortBy || 'createdAt';
+        const order = req.query.order === 'asc' ? 1 : -1;
+        const skip = (page - 1) * limit;
+
+        // Build filter
+        let filter = {};
+        if (search) {
+            filter.content = { $regex: search, $options: 'i' };
+        }
+
+        const comments = await Comment.find(filter)
+            .populate('user', 'username email isAdmin')
+            .sort({ [sortBy]: order })
+            .skip(skip)
+            .limit(limit);
+
+        const totalComments = await Comment.countDocuments(filter);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                comments,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalComments / limit),
+                    totalComments,
+                    hasNextPage: page < Math.ceil(totalComments / limit),
+                    hasPrevPage: page > 1
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Get all comments error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error retrieving comments'
         });
     }
 };

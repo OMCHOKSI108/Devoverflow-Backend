@@ -70,23 +70,24 @@ ADMIN PANEL ENDPOINTS
 50. DELETE /api/admin/content/:type/:id - Delete content as admin
 51. GET /api/admin/stats - Get admin dashboard statistics
 52. PUT /api/admin/users/:id - Manage users (ban/unban/promote/demote)
+53. GET /api/admin/users - Get all users with pagination and filtering
 
 FRIEND SYSTEM ENDPOINTS
-53. POST /api/friends/add - Send friend request
-54. POST /api/friends/remove - Remove friend/cancel request
-55. GET /api/friends/profile/:id - Get detailed user profile with friend status
+54. POST /api/friends/add - Send friend request
+55. POST /api/friends/remove - Remove friend/cancel request
+56. GET /api/friends/profile/:id - Get detailed user profile with friend status
 
 UTILITY ENDPOINTS
-56. GET / - API server information
-57. GET /api - Show all available endpoints
-58. GET /health - Health check endpoint
-59. GET /api/docs - Complete API documentation
-60. GET /api/postman-guide - Postman testing guide
+57. GET / - API server information
+58. GET /api - Show all available endpoints
+59. GET /health - Health check endpoint
+60. GET /api/docs - Complete API documentation
+61. GET /api/postman-guide - Postman testing guide
 
 AUTHENTICATION REQUIREMENTS:
-- Public: Endpoints 1, 2, 5, 7, 10, 12, 14, 26, 32, 34, 35, 36, 39, 40, 56, 57, 58, 59, 60
-- User Token Required: Endpoints 3, 4, 6, 8, 9, 11, 13, 15, 16, 17, 18, 19, 20, 21, 24, 25, 27, 28, 29, 30, 31, 33, 37, 38, 41, 42, 43, 44, 45, 46, 53, 54, 55
-- Admin Token Required: Endpoints 47, 48, 49, 50, 51, 52
+- Public: Endpoints 1, 2, 5, 7, 10, 12, 14, 26, 32, 34, 35, 36, 39, 40, 57, 58, 59, 60, 61
+- User Token Required: Endpoints 3, 4, 6, 8, 9, 11, 13, 15, 16, 17, 18, 19, 20, 21, 24, 25, 27, 28, 29, 30, 31, 33, 37, 38, 41, 42, 43, 44, 45, 46, 54, 55, 56
+- Admin Token Required: Endpoints 47, 48, 49, 50, 51, 52, 53
 
 COMMON PARAMETERS:
 - ?page=1&limit=10 - Pagination

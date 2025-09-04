@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "admin": "cd my-admin-panel && npm run dev",
+    "admin:install": "cd my-admin-panel && npm install",
     "test": "node test-setup.js",
     "test:setup": "node test-setup.js"
   },

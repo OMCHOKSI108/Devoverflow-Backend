@@ -1,13 +1,17 @@
 import express from 'express';
 const router = express.Router();
-import { addFriend, removeFriend, getProfile } from '../controllers/friendController.js';
+import { addFriend, removeFriend, getProfile, getAllFriendships, getFriendshipStats, adminRemoveFriendship } from '../controllers/friendController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { adminOnly } from '../middleware/adminMiddleware.js';
 
-// Add friend
+// User routes
 router.post('/add', protect, addFriend);
-// Remove friend
 router.post('/remove', protect, removeFriend);
-// Get user profile (with friends)
 router.get('/profile/:id?', protect, getProfile);
+
+// Admin routes
+router.get('/admin/all', protect, adminOnly, getAllFriendships);
+router.get('/admin/stats', protect, adminOnly, getFriendshipStats);
+router.delete('/admin/remove', protect, adminOnly, adminRemoveFriendship);
 
 export default router;

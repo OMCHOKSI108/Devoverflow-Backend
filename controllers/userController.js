@@ -953,6 +953,117 @@ export const updateUserSettings = async (req, res) => {
     }
 };
 
+// @desc    Get all users (Admin only)
+// @route   GET /api/admin/users
+// @access  Private/Admin
+export const getAllUsers = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const search = req.query.search || '';
+        const role = req.query.role || 'all';
+        const status = req.query.status || 'all';
+        const sortBy = req.query.sortBy || 'createdAt';
+        const order = req.query.order === 'asc' ? 1 : -1;
+
+        // Build search query
+        let searchQuery = {};
+
+        // Search by username, email, or name
+        if (search) {
+            searchQuery.$or = [
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { name: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Filter by role
+        if (role !== 'all') {
+            searchQuery.role = role;
+        }
+
+        // Filter by status (you might want to add an 'isActive' field to User model)
+        if (status === 'active') {
+            searchQuery.isActive = { $ne: false };
+        } else if (status === 'inactive') {
+            searchQuery.isActive = false;
+        }
+
+        // Calculate pagination
+        const skip = (page - 1) * limit;
+
+        // Get total count for pagination
+        const totalUsers = await User.countDocuments(searchQuery);
+
+        // Get users with sorting and pagination
+        const users = await User.find(searchQuery)
+            .select('-password') // Exclude password field
+            .sort({ [sortBy]: order })
+            .skip(skip)
+            .limit(limit)
+            .populate('bookmarks', 'title createdAt');
+
+        // Get user statistics for each user
+        const usersWithStats = await Promise.all(
+            users.map(async (user) => {
+                const questionsCount = await Question.countDocuments({ user: user._id });
+                const answersCount = await Answer.countDocuments({ user: user._id });
+                const acceptedAnswersCount = await Answer.countDocuments({
+                    user: user._id,
+                    isAccepted: true
+                });
+
+                return {
+                    ...user.toObject(),
+                    stats: {
+                        questionsAsked: questionsCount,
+                        answersGiven: answersCount,
+                        acceptedAnswers: acceptedAnswersCount,
+                        reputation: user.reputation,
+                        badges: user.badges || [],
+                        joinedDate: user.createdAt
+                    }
+                };
+            })
+        );
+
+        // Calculate pagination info
+        const totalPages = Math.ceil(totalUsers / limit);
+        const hasNextPage = page < totalPages;
+        const hasPrevPage = page > 1;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                users: usersWithStats,
+                pagination: {
+                    currentPage: page,
+                    totalPages,
+                    totalUsers,
+                    hasNextPage,
+                    hasPrevPage,
+                    limit
+                },
+                filters: {
+                    search,
+                    role,
+                    status,
+                    sortBy,
+                    order: order === 1 ? 'asc' : 'desc'
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Get all users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error retrieving users'
+        });
+    }
+};
+
 // Utility function to create notifications
 export const createNotification = async (recipientId, senderId, type, title, message, data = {}) => {
     try {

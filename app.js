@@ -3,12 +3,12 @@ import express from 'express';
 
 // Check required environment variables
 if (!process.env.JWT_SECRET) {
-    console.error('⚠️ JWT_SECRET is not set in environment variables!');
+    console.error(' JWT_SECRET is not set in environment variables!');
     process.exit(1);
 }
 
 // Log successful environment variable loading
-console.log('✅ Environment variables loaded successfully');
+console.log('Environment variables loaded successfully');
 import mongoose from 'mongoose';
 import path from 'path';
 // In ES modules, __dirname is not available by default. Use this workaround:
@@ -49,7 +49,7 @@ app.use((req, res, next) => {
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://labworkcharusataiml:54BdZtLCfVjVgesP@cluster0.ivruja7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
     .then(() => {
-        console.log('📂 Connected to MongoDB');
+        console.log('Connected to MongoDB');
     })
     .catch((error) => {
         console.error('❌ MongoDB connection error:', error);
@@ -70,16 +70,16 @@ app.get('/', (req, res) => {
             apiBase: 'http://https://devoverflow-backend.onrender.com/api'
         },
         features: [
-            '✅ User Authentication (JWT)',
-            '✅ Questions & Answers System',
-            '✅ Voting & Reputation System',
-            '✅ Comments & Bookmarks',
-            '✅ AI-Powered Suggestions',
-            '✅ File Upload Support',
-            '✅ Admin Panel',
-            '✅ Email Notifications',
-            '✅ Search & Filtering',
-            '✅ Pagination Support'
+            '   User Authentication (JWT)',
+            '   Questions & Answers System',
+            '   Voting & Reputation System',
+            '   Comments & Bookmarks',
+            '   AI-Powered Suggestions',
+            '   File Upload Support',
+            '   Admin Panel',
+            '   Email Notifications',
+            '   Search & Filtering',
+            '   Pagination Support'
         ],
         quickStart: [
             '1. Visit /api/docs for complete API documentation',
@@ -1032,7 +1032,7 @@ app.use((error, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`✅ Server is running on port ${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📱 API Base URL: http://localhost:${PORT}/api`);
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`API Base URL: http://localhost:${PORT}/api`);
 });

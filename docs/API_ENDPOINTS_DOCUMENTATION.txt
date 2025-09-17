@@ -364,6 +364,95 @@ Base Path: /api/ai
         Body: { questionTitle, questionBody }
         Returns: Question improvement suggestions
 
+--------------------------------------------------------------------------------
+                                                                                                 AI FLOWCHART ENDPOINTS (New)
+--------------------------------------------------------------------------------
+
+Base Path: /api/ai/flowchart
+
+1) Create Flowchart
+- Method: POST `/api/ai/flowchart`  🔒 Protected
+- Description: Generate a Mermaid flowchart from a natural-language prompt and optionally render to PNG or SVG.
+- Headers: `Authorization: Bearer <token>`
+- Body:
+
+```json
+{
+        "prompt": "Explain a login flow with error handling",
+        "render": true,
+        "output": "png"
+}
+```
+- Successful response (201):
+
+```json
+{
+        "success": true,
+        "data": {
+                "id": "flow_12345",
+                "mermaid": "graph LR\nA[Start] --> B{Auth?}\n...",
+                "markdown": "```mermaid\n...code...\n```",
+                "render": {
+                        "status": "done",
+                        "pngUrl": "https://cdn.devoverflow.com/flows/flow_12345.png",
+                        "svgUrl": "https://cdn.devoverflow.com/flows/flow_12345.svg"
+                }
+        }
+}
+```
+
+- Notes:
+        - The LLM is instructed to output only Mermaid code starting with `graph LR` or `graph TB`.
+        - If rendering fails synchronously, `render.status` will be `pending` and clients should poll the render endpoint.
+
+2) Get Flow Metadata
+- Method: GET `/api/ai/flowchart/:id`  🔒 Protected
+- Description: Retrieve the stored Mermaid text, prompt, and URLs for a previously generated flowchart.
+- Headers: `Authorization: Bearer <token>`
+- Successful response (200):
+
+```json
+{
+        "success": true,
+        "data": {
+                "id": "flow_12345",
+                "userId": "...",
+                "prompt": "Explain a login flow...",
+                "mermaid": "graph LR\n...",
+                "pngUrl": "https://.../flow_12345.png",
+                "svgUrl": "https://.../flow_12345.svg",
+                "status": "done",
+                "createdAt": "2025-09-17T12:34:56.789Z"
+        }
+}
+```
+
+3) Get Render Status / URLs
+- Method: GET `/api/ai/flowchart/:id/render`  🔒 Protected
+- Description: Fetch rendering status and asset URLs for a flowchart (useful for async rendering workflows).
+- Headers: `Authorization: Bearer <token>`
+- Successful response (200):
+
+```json
+{
+        "success": true,
+        "data": {
+                "status": "pending|done|failed",
+                "pngUrl": null,
+                "svgUrl": "https://.../flow_12345.svg"
+        }
+}
+```
+
+Implementation Notes:
+- LLM call uses Gemini/Groq. Ensure environment variable for the chosen provider is set (e.g., `GEMINI_API_KEY`).
+- The system prompt must force the LLM to return ONLY Mermaid code (no markdown or explanations).
+- Rendering option: Kroki (`https://kroki.io/mermaid/<png|svg>`) is used by default; outputs saved to `/uploads/flows/` and served statically. Optionally replace with S3 or Mermaid CLI.
+- DB collection: `flows` with schema `{ id, userId, prompt, mermaid, pngUrl, svgUrl, status, createdAt }`.
+- Error handling:
+        - If LLM fails, endpoint returns 500 `{ success:false, message:"AI generation failed" }`.
+        - If rendering fails, flow `status` remains `pending` and clients can poll `/render`.
+
 ================================================================================
                             9. FILE UPLOAD ENDPOINTS
 ================================================================================

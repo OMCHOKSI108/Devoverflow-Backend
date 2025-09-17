@@ -1,4 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import Flow from '../models/Flow.js';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -270,6 +275,128 @@ export const getQuestionImprovements = async (req, res) => {
             success: false,
             message: 'Server error generating question improvements'
         });
+    }
+};
+
+// @desc    Create a flowchart from prompt (Mermaid) and optionally render
+// @route   POST /api/ai/flowchart
+// @access  Private
+export const createFlowchart = async (req, res) => {
+    try {
+        const { prompt, render = true, output = 'png' } = req.body;
+
+        if (!prompt) {
+            return res.status(400).json({ success: false, message: 'Prompt is required' });
+        }
+
+        if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) {
+            return res.status(503).json({ success: false, message: 'AI service not configured' });
+        }
+
+        // Build system prompt that forces only mermaid output
+        const systemPrompt = `You are a diagram generator that outputs ONLY Mermaid flowchart code. Start with \"graph LR\" or \"graph TB\". Do not include markdown fences, explanation, or text.`;
+
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        const fullPrompt = `${systemPrompt}\n\nUser prompt: ${prompt}`;
+
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response;
+        let mermaid = response.text();
+
+        // sanitize: strip code fences and surrounding text
+        mermaid = mermaid.replace(/```/g, '').trim();
+
+        if (!/graph\s+(LR|TB)/i.test(mermaid)) {
+            return res.status(500).json({ success: false, message: 'AI did not return valid Mermaid graph' });
+        }
+
+        const flowId = `flow_${crypto.randomBytes(6).toString('hex')}`;
+
+        const flow = new Flow({ id: flowId, userId: req.user._id, prompt, mermaid, status: 'pending' });
+        await flow.save();
+
+        const resultData = {
+            id: flowId,
+            mermaid,
+            markdown: `\`\`\`mermaid\n${mermaid}\n\`\`\``,
+            render: { status: 'pending' }
+        };
+
+        // If rendering requested, try Kroki (synchronous)
+        if (render) {
+            try {
+                const krokiUrl = `https://kroki.io/mermaid/${output}`;
+                const krokiResp = await axios.post(krokiUrl, mermaid, {
+                    headers: { 'Content-Type': 'text/plain' },
+                    responseType: 'arraybuffer'
+                });
+
+                const uploadsDir = path.join(process.cwd(), 'uploads', 'flows');
+                if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+                const filename = `${flowId}.${output}`;
+                const filePath = path.join(uploadsDir, filename);
+                fs.writeFileSync(filePath, krokiResp.data);
+
+                const publicUrl = `${req.protocol}://${req.get('host')}/uploads/flows/${filename}`;
+
+                if (output === 'png') {
+                    flow.pngUrl = publicUrl;
+                } else if (output === 'svg') {
+                    flow.svgUrl = publicUrl;
+                }
+
+                flow.status = 'done';
+                await flow.save();
+
+                resultData.render = {
+                    status: 'done',
+                    pngUrl: flow.pngUrl || null,
+                    svgUrl: flow.svgUrl || null
+                };
+            } catch (renderErr) {
+                console.error('Rendering error:', renderErr.message || renderErr);
+                // keep status pending; client can poll render endpoint
+                resultData.render = { status: 'pending' };
+            }
+        }
+
+        res.status(201).json({ success: true, data: resultData });
+
+    } catch (error) {
+        console.error('createFlowchart error:', error);
+        res.status(500).json({ success: false, message: 'AI generation failed' });
+    }
+};
+
+// @desc    Get flowchart metadata
+// @route   GET /api/ai/flowchart/:id
+// @access  Private
+export const getFlow = async (req, res) => {
+    try {
+        const flow = await Flow.findOne({ id: req.params.id }).lean();
+        if (!flow) return res.status(404).json({ success: false, message: 'Flow not found' });
+
+        res.status(200).json({ success: true, data: flow });
+    } catch (error) {
+        console.error('getFlow error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc    Get render status and URLs
+// @route   GET /api/ai/flowchart/:id/render
+// @access  Private
+export const getFlowRender = async (req, res) => {
+    try {
+        const flow = await Flow.findOne({ id: req.params.id }).lean();
+        if (!flow) return res.status(404).json({ success: false, message: 'Flow not found' });
+
+        res.status(200).json({ success: true, data: { status: flow.status, pngUrl: flow.pngUrl, svgUrl: flow.svgUrl } });
+    } catch (error) {
+        console.error('getFlowRender error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 

@@ -1,5 +1,4 @@
 {
-  "$schema": "http://json.schemastore.org/package",
   "name": "mobile_app_backend",
   "version": "1.0.0",
   "description": "Backend API for Mobile Q&A Application",

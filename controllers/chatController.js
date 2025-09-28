@@ -207,8 +207,18 @@ export const sendChatMessage = async (req, res) => {
             content: message.trim()
         });
 
-        // Get AI response
-        const aiResponse = await generateAIResponse(message);
+        // Get conversation history for context (last 20 messages)
+        const conversationHistory = await ChatMessage.find({ session: sessionId })
+            .sort({ timestamp: -1 })
+            .limit(20)
+            .select('role content timestamp')
+            .lean();
+
+        // Reverse to get chronological order
+        conversationHistory.reverse();
+
+        // Get AI response with conversation context
+        const aiResponse = await generateAIResponse(message, conversationHistory);
 
         // Save AI response
         const aiMessage = await ChatMessage.create({

@@ -1,0 +1,356 @@
+# 🚀 DEVOVERFLOW AI ENDPOINTS - POSTMAN TESTING GUIDE
+# Generated: September 28, 2025
+================================================================================
+
+BASE URL: http://localhost:3000/api/ai
+AUTHENTICATION: JWT Bearer Token (for protected routes)
+CONTENT-TYPE: application/json
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+1. Start the backend server: `npm start`
+2. Get JWT token by logging in via POST /api/auth/login
+3. Set Authorization header: `Bearer YOUR_JWT_TOKEN`
+4. Ensure GEMINI_API_KEY is configured in .env
+
+================================================================================
+AI ENDPOINTS TESTING GUIDE
+================================================================================
+
+================================================================================
+1. GET AI STATUS (Public)
+================================================================================
+
+METHOD: GET
+URL: {{BASE_URL}}/status
+AUTH: None required
+
+RESPONSE:
+{
+    "success": true,
+    "status": "AI operational",
+    "model": "gemini-1.5-flash-latest",
+    "configured": true,
+    "primaryKey": true,
+    "backupKey": true,
+    "currentKey": "primary"
+}
+
+================================================================================
+2. GET SIMILAR QUESTIONS (Public)
+================================================================================
+
+METHOD: POST
+URL: {{BASE_URL}}/similar-questions
+AUTH: None required
+HEADERS:
+Content-Type: application/json
+
+BODY (raw JSON):
+{
+    "questionTitle": "How to implement authentication in React?",
+    "questionBody": "I'm building a React app and need to add user authentication. What are the best practices for implementing login/logout functionality?"
+}
+
+RESPONSE:
+{
+    "success": true,
+    "data": {
+        "similarQuestions": [
+            "Best practices for React authentication",
+            "Implementing JWT authentication in React applications",
+            "How to handle user sessions in React",
+            "React login/logout implementation guide",
+            "Securing React apps with authentication"
+        ],
+        "model": "gemini-1.5-flash-latest"
+    }
+}
+
+================================================================================
+3. GET ANSWER SUGGESTION (Protected)
+================================================================================
+
+METHOD: POST
+URL: {{BASE_URL}}/answer-suggestion
+AUTH: Bearer Token Required
+HEADERS:
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+BODY (raw JSON):
+{
+    "questionTitle": "How to connect MongoDB with Node.js?",
+    "questionBody": "I'm trying to connect my Node.js application to MongoDB. I have MongoDB installed locally. What are the steps to establish a connection and perform basic CRUD operations?",
+    "tags": ["nodejs", "mongodb", "database"]
+}
+
+RESPONSE:
+{
+    "success": true,
+    "data": {
+        "suggestion": "To connect MongoDB with Node.js, you'll need to:\n\n1. Install the MongoDB driver: `npm install mongodb`\n\n2. Create connection code:\n```javascript\nconst { MongoClient } = require('mongodb');\n\nconst uri = 'mongodb://localhost:27017';\nconst client = new MongoClient(uri);\n\nasync function connectDB() {\n  try {\n    await client.connect();\n    console.log('Connected to MongoDB');\n  } finally {\n    await client.close();\n  }\n}\n```\n\n3. For CRUD operations, use the following patterns...",
+        "confidence": "high",
+        "model": "gemini-1.5-flash-latest"
+    }
+}
+
+================================================================================
+4. GET TAG SUGGESTIONS (Protected)
+================================================================================
+
+METHOD: POST
+URL: {{BASE_URL}}/tag-suggestions
+AUTH: Bearer Token Required
+HEADERS:
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+BODY (raw JSON):
+{
+    "questionTitle": "React state not updating immediately",
+    "questionBody": "I'm having an issue where setState in React doesn't update the state immediately. The console.log shows the old value even after calling setState."
+}
+
+RESPONSE:
+{
+    "success": true,
+    "data": {
+        "suggestedTags": [
+            "react",
+            "javascript",
+            "state-management",
+            "hooks",
+            "debugging"
+        ],
+        "model": "gemini-1.5-flash-latest"
+    }
+}
+
+================================================================================
+5. AI CHATBOT (Protected)
+================================================================================
+
+METHOD: POST
+URL: {{BASE_URL}}/chatbot
+AUTH: Bearer Token Required
+HEADERS:
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+BODY (raw JSON) - Simple message:
+{
+    "message": "How do I reverse a string in JavaScript?"
+}
+
+BODY (raw JSON) - With context:
+{
+    "message": "Show me the code for that",
+    "context": "You are a JavaScript expert helping with string manipulation"
+}
+
+RESPONSE:
+{
+    "success": true,
+    "data": {
+        "response": "To reverse a string in JavaScript, you can use several methods:\n\n1. Using split, reverse, and join:\n```javascript\nfunction reverseString(str) {\n  return str.split('').reverse().join('');\n}\n```\n\n2. Using a for loop:\n```javascript\nfunction reverseString(str) {\n  let reversed = '';\n  for (let i = str.length - 1; i >= 0; i--) {\n    reversed += str[i];\n  }\n  return reversed;\n}\n```\n\nThe first method is more concise and commonly used.",
+        "timestamp": "2025-09-28T10:30:00.000Z",
+        "model": "gemini-1.5-flash-latest"
+    }
+}
+
+================================================================================
+6. GET QUESTION IMPROVEMENTS (Protected)
+================================================================================
+
+METHOD: POST
+URL: {{BASE_URL}}/question-improvements
+AUTH: Bearer Token Required
+HEADERS:
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+BODY (raw JSON):
+{
+    "questionTitle": "help with code",
+    "questionBody": "my code not working pls fix",
+    "tags": ["javascript"]
+}
+
+RESPONSE:
+{
+    "success": true,
+    "data": {
+        "improvements": "Here are some suggestions to improve your question:\n\n1. **Title clarity**: \"help with code\" is too vague. Try something more specific like \"JavaScript function returning undefined instead of expected value\"\n\n2. **Question details**: Please provide:\n   - The actual code that's not working\n   - What you expect it to do\n   - What it's actually doing\n   - Any error messages\n\n3. **Code formatting**: When sharing code, use proper formatting with syntax highlighting\n\n4. **Context**: Mention what you're trying to accomplish overall\n\n5. **Tags**: Consider adding more specific tags like 'functions', 'debugging', or the specific JavaScript feature you're using",
+        "model": "gemini-1.5-flash-latest"
+    }
+}
+
+================================================================================
+7. CREATE FLOWCHART (Protected)
+================================================================================
+
+METHOD: POST
+URL: {{BASE_URL}}/flowchart
+AUTH: Bearer Token Required
+HEADERS:
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+BODY (raw JSON) - Basic flowchart:
+{
+    "prompt": "Create a flowchart for user authentication process",
+    "render": true,
+    "output": "png"
+}
+
+BODY (raw JSON) - Advanced flowchart:
+{
+    "prompt": "Create a detailed flowchart showing the complete software development lifecycle from requirement gathering to deployment",
+    "render": false
+}
+
+RESPONSE:
+{
+    "success": true,
+    "data": {
+        "id": "flow_a1b2c3d4e5f6",
+        "mermaid": "graph TB\n    A[Start] --> B{Gather Requirements}\n    B --> C{Analyze Requirements}\n    C --> D{Design Solution}\n    D --> E{Implement Code}\n    E --> F{Test Code}\n    F --> G{Deploy}\n    G --> H[End]",
+        "markdown": "```mermaid\ngraph TB\n    A[Start] --> B{Gather Requirements}\n    B --> C{Analyze Requirements}\n    C --> D{Design Solution}\n    D --> E{Implement Code}\n    E --> F{Test Code}\n    F --> G{Deploy}\n    G --> H[End]\n```",
+        "render": {
+            "status": "done",
+            "pngUrl": "http://localhost:3000/uploads/flows/flow_a1b2c3d4e5f6.png",
+            "svgUrl": "http://localhost:3000/uploads/flows/flow_a1b2c3d4e5f6.svg"
+        }
+    }
+}
+
+================================================================================
+8. GET FLOWCHART METADATA (Protected)
+================================================================================
+
+METHOD: GET
+URL: {{BASE_URL}}/flowchart/{flow_id}
+AUTH: Bearer Token Required
+HEADERS:
+Authorization: Bearer YOUR_JWT_TOKEN
+
+EXAMPLE URL: {{BASE_URL}}/flowchart/flow_a1b2c3d4e5f6
+
+RESPONSE:
+{
+    "success": true,
+    "data": {
+        "_id": "6708a1b2c3d4e5f6789abc",
+        "id": "flow_a1b2c3d4e5f6",
+        "userId": "user_id_here",
+        "prompt": "Create a flowchart for user authentication process",
+        "mermaid": "graph TB\n    A[Start] --> B{Login}\n    B --> C[Success]\n    B --> D[Failure]",
+        "status": "done",
+        "pngUrl": "http://localhost:3000/uploads/flows/flow_a1b2c3d4e5f6.png",
+        "svgUrl": "http://localhost:3000/uploads/flows/flow_a1b2c3d4e5f6.svg",
+        "createdAt": "2025-09-28T10:30:00.000Z"
+    }
+}
+
+================================================================================
+9. GET FLOWCHART RENDER STATUS (Protected)
+================================================================================
+
+METHOD: GET
+URL: {{BASE_URL}}/flowchart/{flow_id}/render
+AUTH: Bearer Token Required
+HEADERS:
+Authorization: Bearer YOUR_JWT_TOKEN
+
+EXAMPLE URL: {{BASE_URL}}/flowchart/flow_a1b2c3d4e5f6/render
+
+RESPONSE:
+{
+    "success": true,
+    "data": {
+        "status": "done",
+        "pngUrl": "http://localhost:3000/uploads/flows/flow_a1b2c3d4e5f6.png",
+        "svgUrl": "http://localhost:3000/uploads/flows/flow_a1b2c3d4e5f6.svg"
+    }
+}
+
+================================================================================
+POSTMAN ENVIRONMENT SETUP
+================================================================================
+
+Create a new environment in Postman with these variables:
+
+BASE_URL = http://localhost:3000/api/ai
+JWT_TOKEN = YOUR_JWT_TOKEN_HERE
+
+================================================================================
+AUTHENTICATION WORKFLOW
+================================================================================
+
+1. Login to get JWT token:
+   POST http://localhost:3000/api/auth/login
+   Body: { "email": "admin@example.com", "password": "your_password" }
+
+2. Copy the token from response and set in environment
+
+3. Use {{JWT_TOKEN}} in Authorization header for protected routes
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+✅ AI Status Check
+✅ Similar Questions (Public)
+✅ Answer Suggestion (Protected)
+✅ Tag Suggestions (Protected)
+✅ Chatbot (Protected)
+✅ Question Improvements (Protected)
+✅ Flowchart Creation (Protected)
+✅ Flowchart Retrieval (Protected)
+✅ Flowchart Render Status (Protected)
+
+================================================================================
+ERROR HANDLING
+================================================================================
+
+Common Error Responses:
+
+1. AI Not Configured:
+{
+    "success": false,
+    "message": "AI service not configured"
+}
+
+2. Invalid Request:
+{
+    "success": false,
+    "message": "Please provide question title and body"
+}
+
+3. Authentication Error:
+{
+    "success": false,
+    "message": "Not authorized, no token"
+}
+
+4. Server Error:
+{
+    "success": false,
+    "message": "Server error generating AI response"
+}
+
+================================================================================
+PERFORMANCE NOTES
+================================================================================
+
+- AI responses typically take 2-5 seconds
+- Flowchart rendering may take additional time
+- Rate limiting may apply for frequent requests
+- Large prompts may result in longer response times
+
+================================================================================
+END OF AI ENDPOINTS TESTING GUIDE
+================================================================================

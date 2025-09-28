@@ -4,22 +4,87 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import Flow from '../models/Flow.js';
+import { generateAIResponse, generateSimpleAIResponse, getAIStatus } from '../utils/aiService.js';
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize Gemini AI with primary key
+let genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+let currentApiKey = 'primary';
+
+/**
+ * Switch to backup API key if primary fails
+ */
+const switchToBackupKey = () => {
+    if (currentApiKey === 'primary' && process.env.GEMINI_API_KEY2) {
+        console.log('Switching to backup Gemini API key...');
+        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY2);
+        currentApiKey = 'backup';
+        return true;
+    }
+    return false;
+};
+
+/**
+ * Reset to primary API key
+ */
+const resetToPrimaryKey = () => {
+    if (currentApiKey === 'backup') {
+        console.log('Resetting to primary Gemini API key...');
+        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        currentApiKey = 'primary';
+    }
+};
+
+/**
+ * Generate content with fallback API key support
+ */
+const generateContentWithFallback = async (prompt) => {
+    let attempts = 0;
+    const maxAttempts = 2;
+
+    while (attempts < maxAttempts) {
+        try {
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+
+            // Reset to primary key on success
+            if (currentApiKey === 'backup') {
+                resetToPrimaryKey();
+            }
+
+            return response;
+        } catch (error) {
+            console.error(`Gemini API error (attempt ${attempts + 1}):`, error);
+
+            // Try backup key if primary fails
+            if (attempts === 0 && switchToBackupKey()) {
+                attempts++;
+                continue;
+            }
+
+            attempts++;
+            if (attempts >= maxAttempts) {
+                throw error;
+            }
+        }
+    }
+};
 
 // @desc    Get AI service status
 // @route   GET /api/ai/status
 // @access  Public
 export const getAiStatus = (req, res) => {
     try {
-        const isConfigured = !!process.env.GEMINI_API_KEY;
+        const aiStatus = getAIStatus();
 
         res.status(200).json({
             success: true,
-            status: isConfigured ? 'AI operational' : 'AI not configured',
-            model: 'gemini-1.5-flash',
-            configured: isConfigured
+            status: aiStatus.configured ? 'AI operational' : 'AI not configured',
+            model: 'gemini-1.5-flash-latest',
+            configured: aiStatus.configured,
+            primaryKey: aiStatus.primaryKey,
+            backupKey: aiStatus.backupKey,
+            currentKey: aiStatus.currentKey
         });
     } catch (error) {
         res.status(500).json({
@@ -43,22 +108,20 @@ export const getAnswerSuggestion = async (req, res) => {
             });
         }
 
-        if (!process.env.GEMINI_API_KEY) {
+        if (!getAIStatus().configured) {
             return res.status(503).json({
                 success: false,
                 message: 'AI service not configured'
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
         const prompt = `
         You are an expert programmer and technical assistant. Please provide a helpful, accurate, and well-structured answer to the following programming question:
 
         Title: ${questionTitle}
-        
+
         Question: ${questionBody}
-        
+
         ${tags && tags.length > 0 ? `Tags: ${tags.join(', ')}` : ''}
 
         Please provide:
@@ -70,8 +133,7 @@ export const getAnswerSuggestion = async (req, res) => {
         Keep the answer concise but comprehensive, suitable for a Q&A platform.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
+        const response = await generateContentWithFallback(prompt);
         const aiAnswer = response.text();
 
         res.status(200).json({
@@ -79,7 +141,7 @@ export const getAnswerSuggestion = async (req, res) => {
             data: {
                 suggestion: aiAnswer,
                 confidence: 'high',
-                model: 'gemini-1.5-flash'
+                model: 'gemini-1.5-flash-latest'
             }
         });
 
@@ -113,7 +175,7 @@ export const getTagSuggestions = async (req, res) => {
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = `
         Based on the following programming question, suggest 3-5 relevant tags that would help categorize this question:
@@ -149,7 +211,7 @@ export const getTagSuggestions = async (req, res) => {
             success: true,
             data: {
                 suggestedTags,
-                model: 'gemini-1.5-flash'
+                model: 'gemini-1.5-flash-latest'
             }
         });
 
@@ -176,35 +238,25 @@ export const chatbot = async (req, res) => {
             });
         }
 
-        if (!process.env.GEMINI_API_KEY) {
+        if (!getAIStatus().configured) {
             return res.status(503).json({
                 success: false,
                 message: 'AI service not configured'
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-        let prompt = `
-        You are a helpful programming assistant for a Q&A platform. Please provide a helpful, accurate response to the user's question or request.
-
-        ${context ? `Context: ${context}` : ''}
-        
-        User: ${message}
-        
-        Please provide a clear, concise, and helpful response. If it's a coding question, include relevant code examples.
-        `;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const aiResponse = response.text();
+        // For backward compatibility, use simple response if no context provided
+        // In future, this endpoint should be deprecated in favor of the chat sessions
+        const aiResponse = context ?
+            await generateAIResponse(message, [{ role: 'system', content: context }]) :
+            await generateSimpleAIResponse(message);
 
         res.status(200).json({
             success: true,
             data: {
                 response: aiResponse,
                 timestamp: new Date().toISOString(),
-                model: 'gemini-1.5-flash'
+                model: 'gemini-1.5-flash-latest'
             }
         });
 
@@ -238,7 +290,7 @@ export const getQuestionImprovements = async (req, res) => {
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = `
         Please analyze the following programming question and provide suggestions for improvement:
@@ -265,7 +317,7 @@ export const getQuestionImprovements = async (req, res) => {
             success: true,
             data: {
                 improvements,
-                model: 'gemini-1.5-flash'
+                model: 'gemini-1.5-flash-latest'
             }
         });
 
@@ -296,7 +348,7 @@ export const createFlowchart = async (req, res) => {
         // Build system prompt that forces only mermaid output
         const systemPrompt = `You are a diagram generator that outputs ONLY Mermaid flowchart code. Start with \"graph LR\" or \"graph TB\". Do not include markdown fences, explanation, or text.`;
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const fullPrompt = `${systemPrompt}\n\nUser prompt: ${prompt}`;
 
@@ -421,7 +473,7 @@ export const getSimilarQuestions = async (req, res) => {
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = `
         Based on this programming question, generate 3-5 similar question titles that someone might ask:
@@ -448,7 +500,7 @@ export const getSimilarQuestions = async (req, res) => {
             success: true,
             data: {
                 similarQuestions,
-                model: 'gemini-1.5-flash'
+                model: 'gemini-1.5-flash-latest'
             }
         });
 

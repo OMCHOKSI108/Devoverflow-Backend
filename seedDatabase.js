@@ -143,7 +143,50 @@ async function createMockUsers() {
     console.log('Creating mock users...');
     const users = [];
 
-    for (let i = 0; i < 25; i++) {
+    // Create admin user from environment variables if provided
+    if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+        console.log('Creating admin user from environment variables...');
+
+        const adminName = process.env.ADMIN_NAME || 'Admin User';
+        const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+        const adminEmail = process.env.ADMIN_EMAIL;
+        const adminPassword = process.env.ADMIN_PASSWORD;
+        const adminLocation = process.env.ADMIN_LOCATION || 'Mumbai';
+
+        const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
+
+        const adminUser = new User({
+            username: adminUsername,
+            email: adminEmail,
+            password: hashedAdminPassword,
+            isVerified: true,
+            isAdmin: true,
+            reputation: 10000, // High reputation for admin
+            badges: ['admin', 'moderator', 'helpful'],
+            profile: {
+                fullName: adminName,
+                bio: `Administrator of DevOverflow. Managing the platform and ensuring quality content.`,
+                location: adminLocation,
+                website: `https://devoverflow.com`,
+                tags: ['administration', 'moderation', 'community']
+            },
+            settings: {
+                theme: 'dark',
+                language: 'en',
+                emailNotifications: true,
+                pushNotifications: true
+            }
+        });
+
+        await adminUser.save();
+        users.push(adminUser);
+        console.log(`Created admin user: ${adminName} (${adminEmail})`);
+    }
+
+    // Create regular mock users (24 users to make total 25, or 25 if no admin)
+    const numRegularUsers = process.env.ADMIN_EMAIL ? 24 : 25;
+
+    for (let i = 0; i < numRegularUsers; i++) {
         const name = indianNames[i % indianNames.length];
         const [firstName, lastName] = name.split(' ');
         const username = `${firstName.toLowerCase()}${lastName.toLowerCase()}${i + 1}`;
@@ -157,7 +200,7 @@ async function createMockUsers() {
             email,
             password: hashedPassword,
             isVerified: Math.random() > 0.3, // 70% verified
-            isAdmin: i === 0, // First user is admin
+            isAdmin: false, // Regular users are not admin
             reputation: Math.floor(Math.random() * 5000) + 100,
             badges: ['helpful', 'curious'][Math.floor(Math.random() * 2)],
             profile: {

@@ -1,0 +1,66 @@
+site_name: DevOverflow Backend API Documentation
+site_description: Comprehensive API documentation for the DevOverflow mobile application backend
+site_author: DevOverflow Team
+site_url: https://omchoksi108.github.io/Devoverflow-Backend/
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Mobile App Integration: mobile-developer-integration-guide.md
+  - Authentication: authentication.md
+  - API Reference:
+      - Users: api/users.md
+      - Questions: api/questions.md
+      - Answers: api/answers.md
+      - Comments: api/comments.md
+      - Bookmarks: api/bookmarks.md
+      - Chat: api/chat.md
+      - Friends: api/friends.md
+      - Groups: api/groups.md
+      - Gamification: api/gamification.md
+      - Notifications: api/notifications.md
+      - Search: api/search.md
+      - AI Features: api/ai.md
+      - Admin: api/admin.md
+      - Upload: api/upload.md
+  - Data Models: data-models.md
+  - Error Handling: error-handling.md
+  - Deployment: deployment.md
+  - MkDocs Deployment: DEPLOYMENT_GUIDE.md

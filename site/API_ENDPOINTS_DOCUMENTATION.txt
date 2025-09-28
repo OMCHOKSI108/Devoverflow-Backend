@@ -1,0 +1,594 @@
+
+## AI Flowchart Endpoints
+
+Base path: `/api/ai/flowchart`
+
+1) Create Flowchart
+- Method: POST `/api/ai/flowchart` (Protected)
+- Description: Generate a Mermaid flowchart from a natural-language prompt. Optionally render to PNG or SVG.
+- Headers: `Authorization: Bearer <token>`
+- Request body:
+
+```json
+{
+	"prompt": "Explain a login flow with error handling",
+	"render": true,
+	"output": "png"
+}
+```
+- Success response (201):
+
+```json
+{
+	"success": true,
+	"data": {
+		"id": "flow_12345",
+		"mermaid": "graph LR\nA[Start] --> B{Auth?}\n...",
+		"markdown": "```mermaid\n...code...\n```",
+		"render": {
+			"status": "done",
+			"pngUrl": "https://cdn.devoverflow.com/flows/flow_12345.png",
+			"svgUrl": "https://cdn.devoverflow.com/flows/flow_12345.svg"
+		}
+	}
+}
+```
+
+- Notes:
+	- The LLM is forced to return only valid Mermaid code (must start with `graph LR` or `graph TB`).
+	- If rendering fails, `render.status` will be `pending` and the client can poll the render endpoint.
+
+2) Get Flow Metadata
+- Method: GET `/api/ai/flowchart/:id` (Protected)
+- Description: Retrieve saved mermaid text and stored metadata for a generated flowchart.
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"id": "flow_12345",
+		"userId": "...",
+		"prompt": "Explain a login flow...",
+		"mermaid": "graph LR\n...",
+		"pngUrl": "https://.../flow_12345.png",
+		"svgUrl": "https://.../flow_12345.svg",
+		"status": "done",
+		"createdAt": "2025-09-17T12:34:56.789Z"
+	}
+}
+```
+
+3) Get Render Status / URLs
+- Method: GET `/api/ai/flowchart/:id/render` (Protected)
+- Description: Retrieve rendering status and URLs for a flowchart (useful when rendering is async).
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"status": "pending|done|failed",
+		"pngUrl": null,
+		"svgUrl": "https://.../flow_12345.svg"
+	}
+}
+```
+
+Implementation notes:
+- LLM call uses Gemini (or GROQ if configured). Use a strict system prompt to ensure only Mermaid code is returned.
+- Rendering uses Kroki (`https://kroki.io/mermaid/<png|svg>`) and saves files to `/uploads/flows/` by default. You can switch to S3 or Mermaid CLI as needed.
+- DB collection: `flows` with schema `{ id, userId, prompt, mermaid, pngUrl, svgUrl, status, createdAt }`.
+- Errors:
+	- If LLM generation fails: return 500 `{ success:false, message:"AI generation failed" }`.
+	- If rendering fails: return `render.status = "pending"` and allow polling.
+
+## Gamification Endpoints
+
+Base path: `/api/gamification`
+
+1) Get User Reputation
+- Method: GET `/api/gamification/reputation` (Protected)
+- Description: Get user's current reputation, level, and progress to next level
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"reputation": 150,
+		"level": 2,
+		"nextLevelPoints": 200,
+		"progressToNextLevel": 50
+	}
+}
+```
+
+2) Get Reputation History
+- Method: GET `/api/gamification/reputation/history` (Protected)
+- Description: Get user's reputation change history with pagination
+- Headers: `Authorization: Bearer <token>`
+- Query params: `?page=1&limit=20`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"history": [
+			{
+				"points": 10,
+				"reason": "answer_accepted",
+				"timestamp": "2025-09-28T10:00:00Z",
+				"total": 150
+			}
+		],
+		"pagination": {
+			"currentPage": 1,
+			"totalPages": 1,
+			"totalHistory": 5
+		}
+	}
+}
+```
+
+3) Get User Badges
+- Method: GET `/api/gamification/badges` (Protected)
+- Description: Get all badges earned by the user
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"badges": [
+			{
+				"id": "first_question",
+				"name": "Curious Mind",
+				"description": "Asked your first question",
+				"icon": "❓",
+				"color": "#3498db",
+				"unlockedAt": "2025-09-28T09:00:00Z"
+			}
+		]
+	}
+}
+```
+
+4) Get User Privileges
+- Method: GET `/api/gamification/privileges` (Protected)
+- Description: Get all privileges available to the user based on reputation
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"privileges": [
+			{
+				"id": "vote_up",
+				"name": "Vote Up",
+				"description": "Can upvote questions and answers",
+				"icon": "👍"
+			}
+		]
+	}
+}
+```
+
+5) Get Leaderboard
+- Method: GET `/api/gamification/leaderboard` (Protected)
+- Description: Get top users by reputation
+- Headers: `Authorization: Bearer <token>`
+- Query params: `?limit=50&period=all_time` (period: all_time, monthly, weekly)
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"leaderboard": [
+			{
+				"rank": 1,
+				"user": {
+					"id": "user123",
+					"name": "John Doe",
+					"reputation": 1250,
+					"badges": ["expert"],
+					"avatar": "https://example.com/avatar.jpg"
+				}
+			}
+		],
+		"period": "all_time"
+	}
+}
+```
+
+Implementation notes:
+- User model includes `reputation` (Number), `badges` (Array), `privileges` (Array) fields
+- ReputationHistory model tracks all reputation changes with reason and related entity
+- Level calculation: every 100 points = 1 level
+- Badges are automatically unlocked based on reputation milestones and achievements
+- Privileges are granted based on reputation thresholds
+- Leaderboard supports different time periods (all_time, monthly, weekly)
+
+## AI Chat System Endpoints
+
+Base path: `/api/chat`
+
+1) Get Chat Sessions
+- Method: GET `/api/chat/sessions` (Protected)
+- Description: Get user's chat sessions with pagination
+- Headers: `Authorization: Bearer <token>`
+- Query params: `?page=1&limit=10`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"sessions": [
+			{
+				"id": "session123",
+				"title": "React Hooks Help",
+				"lastMessage": "You can use useState for...",
+				"createdAt": "2025-09-28T10:00:00Z",
+				"updatedAt": "2025-09-28T10:05:00Z",
+				"messageCount": 4
+			}
+		],
+		"pagination": {
+			"currentPage": 1,
+			"totalPages": 1,
+			"totalSessions": 3
+		}
+	}
+}
+```
+
+2) Get Chat Session Messages
+- Method: GET `/api/chat/sessions/:sessionId/messages` (Protected)
+- Description: Get all messages for a specific chat session
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"sessionId": "session123",
+		"messages": [
+			{
+				"id": "msg1",
+				"role": "user",
+				"content": "How do I use React hooks?",
+				"timestamp": "2025-09-28T10:00:00Z"
+			},
+			{
+				"id": "msg2",
+				"role": "assistant",
+				"content": "React hooks are functions that let you use state and lifecycle features in functional components...",
+				"timestamp": "2025-09-28T10:00:05Z"
+			}
+		]
+	}
+}
+```
+
+3) Create New Chat Session
+- Method: POST `/api/chat/sessions` (Protected)
+- Description: Create a new chat session with optional initial message
+- Headers: `Authorization: Bearer <token>`
+- Request body:
+
+```json
+{
+	"title": "React Hooks Discussion",
+	"initialMessage": "Can you explain React hooks?"
+}
+```
+
+- Success response (201):
+
+```json
+{
+	"success": true,
+	"data": {
+		"session": {
+			"id": "session123",
+			"title": "React Hooks Discussion",
+			"lastMessage": "React hooks are...",
+			"messageCount": 2,
+			"createdAt": "2025-09-28T10:00:00Z"
+		},
+		"messages": [
+			{
+				"id": "msg1",
+				"role": "user",
+				"content": "Can you explain React hooks?",
+				"timestamp": "2025-09-28T10:00:00Z"
+			},
+			{
+				"id": "msg2",
+				"role": "assistant",
+				"content": "React hooks are functions...",
+				"timestamp": "2025-09-28T10:00:05Z"
+			}
+		]
+	}
+}
+```
+
+4) Send Message to AI
+- Method: POST `/api/chat/sessions/:sessionId/messages` (Protected)
+- Description: Send a message to AI in an existing chat session
+- Headers: `Authorization: Bearer <token>`
+- Request body:
+
+```json
+{
+	"message": "Can you show me an example?"
+}
+```
+
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"message": {
+			"id": "msg3",
+			"role": "user",
+			"content": "Can you show me an example?",
+			"timestamp": "2025-09-28T10:01:00Z"
+		},
+		"aiResponse": {
+			"id": "msg4",
+			"role": "assistant",
+			"content": "Here's an example of useState hook...",
+			"timestamp": "2025-09-28T10:01:05Z"
+		}
+	}
+}
+```
+
+5) Delete Chat Session
+- Method: DELETE `/api/chat/sessions/:sessionId` (Protected)
+- Description: Soft delete a chat session (mark as inactive)
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"message": "Chat session deleted successfully"
+}
+```
+
+Implementation notes:
+- ChatSession model: `{ user, title, lastMessage, messageCount, isActive, timestamps }`
+- ChatMessage model: `{ session, role, content, timestamp }`
+- AI responses generated using Gemini 1.5 Flash model
+- Sessions are soft-deleted (isActive: false) to preserve data
+- Messages are stored individually for conversation history
+- All chat routes require authentication
+
+## Groups Management Endpoints
+
+Base path: `/api/groups`
+
+1) Get All Groups
+- Method: GET `/api/groups` (Protected)
+- Description: Get all groups with search and pagination
+- Headers: `Authorization: Bearer <token>`
+- Query params: `?page=1&limit=20&search=query`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"groups": [
+			{
+				"id": "group123",
+				"name": "React Developers",
+				"description": "Group for React developers",
+				"memberCount": 25,
+				"createdBy": {
+					"id": "user123",
+					"name": "John Doe"
+				},
+				"createdAt": "2025-09-28T09:00:00Z",
+				"tags": ["react", "javascript"]
+			}
+		],
+		"pagination": {
+			"currentPage": 1,
+			"totalPages": 2,
+			"totalGroups": 35
+		}
+	}
+}
+```
+
+2) Create Group
+- Method: POST `/api/groups` (Protected)
+- Description: Create a new group
+- Headers: `Authorization: Bearer <token>`
+- Request body:
+
+```json
+{
+	"name": "React Developers",
+	"description": "A group for React developers to share knowledge",
+	"tags": ["react", "javascript", "frontend"]
+}
+```
+
+- Success response (201):
+
+```json
+{
+	"success": true,
+	"message": "Group created successfully",
+	"data": {
+		"group": {
+			"id": "group123",
+			"name": "React Developers",
+			"description": "A group for React developers to share knowledge",
+			"memberCount": 1,
+			"createdBy": "user123",
+			"createdAt": "2025-09-28T09:00:00Z",
+			"tags": ["react", "javascript", "frontend"]
+		}
+	}
+}
+```
+
+3) Get Group Details
+- Method: GET `/api/groups/:groupId` (Protected)
+- Description: Get detailed information about a group (members only)
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"group": {
+			"id": "group123",
+			"name": "React Developers",
+			"description": "A group for React developers to share knowledge",
+			"members": [
+				{
+					"id": "user123",
+					"name": "John Doe",
+					"role": "admin",
+					"joinedAt": "2025-09-28T09:00:00Z"
+				}
+			],
+			"questions": [
+				{
+					"id": "question123",
+					"title": "How to use React hooks?",
+					"votes": 5,
+					"answers": 2,
+					"createdAt": "2025-09-28T10:00:00Z"
+				}
+			],
+			"createdAt": "2025-09-28T09:00:00Z",
+			"tags": ["react", "javascript"]
+		}
+	}
+}
+```
+
+4) Join Group
+- Method: POST `/api/groups/:groupId/join` (Protected)
+- Description: Join a group as a member
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"message": "Joined group successfully"
+}
+```
+
+5) Leave Group
+- Method: POST `/api/groups/:groupId/leave` (Protected)
+- Description: Leave a group (admins cannot leave if they're the last admin)
+- Headers: `Authorization: Bearer <token>`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"message": "Left group successfully"
+}
+```
+
+6) Post Question in Group
+- Method: POST `/api/groups/:groupId/questions` (Protected)
+- Description: Post a question in a group (members only)
+- Headers: `Authorization: Bearer <token>`
+- Request body:
+
+```json
+{
+	"title": "How to optimize React performance?",
+	"body": "I'm having performance issues with my React app...",
+	"tags": ["react", "performance"]
+}
+```
+
+- Success response (201):
+
+```json
+{
+	"success": true,
+	"message": "Question posted in group successfully",
+	"data": {
+		"question": {
+			"id": "question123",
+			"title": "How to optimize React performance?",
+			"body": "I'm having performance issues with my React app...",
+			"tags": ["react", "performance"],
+			"createdAt": "2025-09-28T10:00:00Z"
+		}
+	}
+}
+```
+
+7) Get Group Questions
+- Method: GET `/api/groups/:groupId/questions` (Protected)
+- Description: Get questions posted in a group (members only)
+- Headers: `Authorization: Bearer <token>`
+- Query params: `?page=1&limit=20`
+- Success response (200):
+
+```json
+{
+	"success": true,
+	"data": {
+		"questions": [
+			{
+				"id": "question123",
+				"title": "How to optimize React performance?",
+				"body": "I'm having performance issues with my React app...",
+				"author": {
+					"id": "user123",
+					"name": "John Doe",
+					"reputation": 150
+				},
+				"tags": ["react", "performance"],
+				"votes": 3,
+				"answers": 1,
+				"createdAt": "2025-09-28T10:00:00Z"
+			}
+		],
+		"pagination": {
+			"currentPage": 1,
+			"totalPages": 1,
+			"totalQuestions": 5
+		}
+	}
+}
+```
+
+Implementation notes:
+- Group model: `{ name, description, createdBy, members[{user, role, joinedAt}], memberCount, isActive, tags, timestamps }`
+- Question model updated with `group` field for group-specific questions
+- Group membership required for viewing details and posting questions
+- Group creators automatically become admins
+- Admins cannot leave if they're the last admin
+- Groups support text search on name and description
+- All group routes require authentication
+

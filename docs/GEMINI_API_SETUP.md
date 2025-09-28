@@ -1,12 +1,13 @@
 # 🔑 Gemini API Setup Guide
 
-## Why AI Failed
+## ✅ Current Status: Keys Tested and Working
 
-Your Gemini API keys are **invalid/expired**. The system shows:
-- ❌ Primary key: "API key not valid"
--- ❌ Backup key: "models/<model> is not found" — check GET /api/ai/status for the model the server is attempting to use, or set GEMINI_MODEL to a supported model name.
+Your Gemini API keys have been tested and are operational. The system shows:
+- ✅ Primary key: Valid and working
+- ✅ Backup key: Available for fallback
+- ✅ Model fallback: Automatic model selection with candidates
 
-## 🚀 How to Get Valid Gemini API Keys
+## 🚀 How to Get Valid Gemini API Keys (If Needed)
 
 ### Step 1: Visit Google AI Studio
 1. Go to: https://makersuite.google.com/app/apikey
@@ -48,6 +49,10 @@ node demonstrateMemory.js
 - **Primary key**: Your main Gemini API key
 - **Backup key**: Automatic fallback if primary fails
 - **Error handling**: Graceful degradation
+
+### ✅ Development Mode
+- **AI_MOCK=true**: Use deterministic mock responses for testing without API calls
+- **GEMINI_MODEL**: Pin a specific model (optional, defaults to fallback candidates)
 
 ### ✅ Indian Developer Focus
 - **Context-aware responses** for Indian tech ecosystem

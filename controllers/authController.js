@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import User from '../models/User.js';
 
 // Generate JWT Token
@@ -14,12 +14,17 @@ const generateToken = (id) => {
     });
 };
 
-// Create email transporter with improved configuration
+// Configure SendGrid
+if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+// Legacy nodemailer function (kept for backward compatibility)
 export const createTransporter = () => {
     return nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
         port: process.env.EMAIL_PORT || 587,
-        secure: false, // true for 465, false for other ports
+        secure: false,
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
@@ -27,16 +32,54 @@ export const createTransporter = () => {
         tls: {
             rejectUnauthorized: false
         },
-        // Add timeout and connection settings for Render
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 5000, // 5 seconds
-        socketTimeout: 10000, // 10 seconds
-        pool: true, // Use connection pooling
+        connectionTimeout: 10000,
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
+        pool: true,
         maxConnections: 5,
         maxMessages: 100
     });
 };
 
+// Send email using SendGrid (preferred) or nodemailer (fallback)
+export const sendEmail = async (to, subject, html) => {
+    // Try SendGrid first if API key is available
+    if (process.env.SENDGRID_API_KEY) {
+        try {
+            const msg = {
+                to,
+                from: {
+                    email: process.env.SENDGRID_FROM_EMAIL || 'noreply@devoverflow.com',
+                    name: 'DevOverflow Team'
+                },
+                subject,
+                html,
+            };
+
+            await sgMail.send(msg);
+            console.log(`✅ Email sent successfully via SendGrid to ${to}`);
+            return true;
+        } catch (sendGridError) {
+            console.log('SendGrid failed, trying nodemailer fallback:', sendGridError.message);
+        }
+    }
+
+    // Fallback to nodemailer if SendGrid fails or is not configured
+    try {
+        const transporter = createTransporter();
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to,
+            subject,
+            html,
+        });
+        console.log(`✅ Email sent successfully via nodemailer to ${to}`);
+        return true;
+    } catch (nodemailerError) {
+        console.log('Nodemailer also failed:', nodemailerError.message);
+        return false;
+    }
+};
 
 // @desc    Resend verification email
 // @route   POST /api/auth/resend-verification
@@ -229,15 +272,11 @@ export const register = async (req, res) => {
                     const transporter = createTransporter();
                     const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
 
-                    await transporter.sendMail({
-                        from: process.env.EMAIL_USER,
-                        to: email,
-                        subject: 'Verify Your Q&A App Account - Action Required',
-                        html: `
+                    const success = await sendEmail(email, 'Verify Your DevOverflow Account - Action Required', `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <h2 style="color: #2563eb;">Welcome to Q&A App! 🚀</h2>
+                                <h2 style="color: #2563eb;">Welcome to DevOverflow! 🚀</h2>
                                 <p>Hi <strong>${username}</strong>,</p>
-                                <p>Thank you for registering with our Q&A App! To complete your registration and start asking/answering questions, please verify your email address.</p>
+                                <p>Thank you for registering with DevOverflow! To complete your registration and start asking/answering questions, please verify your email address.</p>
 
                                 <div style="text-align: center; margin: 30px 0;">
                                     <a href="${verificationUrl}"
@@ -259,13 +298,17 @@ export const register = async (req, res) => {
                                 </p>
                                 <p style="color: #6b7280; font-size: 14px;">
                                     Best regards,<br>
-                                    Q&A App Team
+                                    DevOverflow Team
                                 </p>
                             </div>
-                        `
-                    });
-                    console.log(`✅ Verification email sent successfully to ${email}`);
-                    break; // Success, exit retry loop
+                        `);
+
+                    if (success) {
+                        console.log(`✅ Verification email sent successfully to ${email}`);
+                        break; // Success, exit retry loop
+                    } else {
+                        throw new Error('Email sending failed');
+                    }
                 } catch (emailError) {
                     retries--;
                     console.log(`Email sending failed (${3 - retries}/3 attempts):`, emailError.message);

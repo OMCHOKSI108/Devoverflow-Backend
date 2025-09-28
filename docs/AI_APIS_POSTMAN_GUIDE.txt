@@ -31,7 +31,7 @@ RESPONSE:
 {
     "success": true,
     "status": "AI operational",
-    "model": "gemini-1.5-flash-latest",
+    "model": "(reported by GET /api/ai/status or set with GEMINI_MODEL env var)",
     "configured": true,
     "primaryKey": true,
     "backupKey": true,
@@ -65,7 +65,7 @@ RESPONSE:
             "React login/logout implementation guide",
             "Securing React apps with authentication"
         ],
-        "model": "gemini-1.5-flash-latest"
+    "model": "(reported by GET /api/ai/status)"
     }
 }
 
@@ -93,7 +93,7 @@ RESPONSE:
     "data": {
         "suggestion": "To connect MongoDB with Node.js, you'll need to:\n\n1. Install the MongoDB driver: `npm install mongodb`\n\n2. Create connection code:\n```javascript\nconst { MongoClient } = require('mongodb');\n\nconst uri = 'mongodb://localhost:27017';\nconst client = new MongoClient(uri);\n\nasync function connectDB() {\n  try {\n    await client.connect();\n    console.log('Connected to MongoDB');\n  } finally {\n    await client.close();\n  }\n}\n```\n\n3. For CRUD operations, use the following patterns...",
         "confidence": "high",
-        "model": "gemini-1.5-flash-latest"
+    "model": "(reported by GET /api/ai/status)"
     }
 }
 
@@ -125,7 +125,7 @@ RESPONSE:
             "hooks",
             "debugging"
         ],
-        "model": "gemini-1.5-flash-latest"
+    "model": "(reported by GET /api/ai/status)"
     }
 }
 
@@ -157,7 +157,7 @@ RESPONSE:
     "data": {
         "response": "To reverse a string in JavaScript, you can use several methods:\n\n1. Using split, reverse, and join:\n```javascript\nfunction reverseString(str) {\n  return str.split('').reverse().join('');\n}\n```\n\n2. Using a for loop:\n```javascript\nfunction reverseString(str) {\n  let reversed = '';\n  for (let i = str.length - 1; i >= 0; i--) {\n    reversed += str[i];\n  }\n  return reversed;\n}\n```\n\nThe first method is more concise and commonly used.",
         "timestamp": "2025-09-28T10:30:00.000Z",
-        "model": "gemini-1.5-flash-latest"
+    "model": "(reported by GET /api/ai/status)"
     }
 }
 
@@ -184,7 +184,7 @@ RESPONSE:
     "success": true,
     "data": {
         "improvements": "Here are some suggestions to improve your question:\n\n1. **Title clarity**: \"help with code\" is too vague. Try something more specific like \"JavaScript function returning undefined instead of expected value\"\n\n2. **Question details**: Please provide:\n   - The actual code that's not working\n   - What you expect it to do\n   - What it's actually doing\n   - Any error messages\n\n3. **Code formatting**: When sharing code, use proper formatting with syntax highlighting\n\n4. **Context**: Mention what you're trying to accomplish overall\n\n5. **Tags**: Consider adding more specific tags like 'functions', 'debugging', or the specific JavaScript feature you're using",
-        "model": "gemini-1.5-flash-latest"
+    "model": "(reported by GET /api/ai/status)"
     }
 }
 

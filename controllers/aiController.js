@@ -1,74 +1,9 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import Flow from '../models/Flow.js';
-import { generateAIResponse, generateSimpleAIResponse, getAIStatus } from '../utils/aiService.js';
-
-// Initialize Gemini AI with primary key
-let genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-let currentApiKey = 'primary';
-
-/**
- * Switch to backup API key if primary fails
- */
-const switchToBackupKey = () => {
-    if (currentApiKey === 'primary' && process.env.GEMINI_API_KEY2) {
-        console.log('Switching to backup Gemini API key...');
-        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY2);
-        currentApiKey = 'backup';
-        return true;
-    }
-    return false;
-};
-
-/**
- * Reset to primary API key
- */
-const resetToPrimaryKey = () => {
-    if (currentApiKey === 'backup') {
-        console.log('Resetting to primary Gemini API key...');
-        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        currentApiKey = 'primary';
-    }
-};
-
-/**
- * Generate content with fallback API key support
- */
-const generateContentWithFallback = async (prompt) => {
-    let attempts = 0;
-    const maxAttempts = 2;
-
-    while (attempts < maxAttempts) {
-        try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-
-            // Reset to primary key on success
-            if (currentApiKey === 'backup') {
-                resetToPrimaryKey();
-            }
-
-            return response;
-        } catch (error) {
-            console.error(`Gemini API error (attempt ${attempts + 1}):`, error);
-
-            // Try backup key if primary fails
-            if (attempts === 0 && switchToBackupKey()) {
-                attempts++;
-                continue;
-            }
-
-            attempts++;
-            if (attempts >= maxAttempts) {
-                throw error;
-            }
-        }
-    }
-};
+import { generateAIResponse, generateSimpleAIResponse, generateContent, getAIStatus } from '../utils/aiService.js';
 
 // @desc    Get AI service status
 // @route   GET /api/ai/status
@@ -80,7 +15,7 @@ export const getAiStatus = (req, res) => {
         res.status(200).json({
             success: true,
             status: aiStatus.configured ? 'AI operational' : 'AI not configured',
-            model: 'gemini-1.5-flash-latest',
+            model: aiStatus.model,
             configured: aiStatus.configured,
             primaryKey: aiStatus.primaryKey,
             backupKey: aiStatus.backupKey,
@@ -133,7 +68,7 @@ export const getAnswerSuggestion = async (req, res) => {
         Keep the answer concise but comprehensive, suitable for a Q&A platform.
         `;
 
-        const response = await generateContentWithFallback(prompt);
+        const response = await generateContent(prompt);
         const aiAnswer = response.text();
 
         res.status(200).json({
@@ -141,7 +76,7 @@ export const getAnswerSuggestion = async (req, res) => {
             data: {
                 suggestion: aiAnswer,
                 confidence: 'high',
-                model: 'gemini-1.5-flash-latest'
+                model: getAIStatus().model
             }
         });
 
@@ -168,14 +103,13 @@ export const getTagSuggestions = async (req, res) => {
             });
         }
 
-        if (!process.env.GEMINI_API_KEY) {
+        if (!getAIStatus().configured) {
             return res.status(503).json({
                 success: false,
                 message: 'AI service not configured'
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = `
         Based on the following programming question, suggest 3-5 relevant tags that would help categorize this question:
@@ -194,8 +128,7 @@ export const getTagSuggestions = async (req, res) => {
         Tags:
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
+        const response = await generateContent(prompt);
         const aiResponse = response.text();
 
         // Parse the response to extract tags
@@ -211,7 +144,7 @@ export const getTagSuggestions = async (req, res) => {
             success: true,
             data: {
                 suggestedTags,
-                model: 'gemini-1.5-flash-latest'
+                model: getAIStatus().model
             }
         });
 
@@ -256,7 +189,7 @@ export const chatbot = async (req, res) => {
             data: {
                 response: aiResponse,
                 timestamp: new Date().toISOString(),
-                model: 'gemini-1.5-flash-latest'
+                model: getAIStatus().model
             }
         });
 
@@ -283,14 +216,13 @@ export const getQuestionImprovements = async (req, res) => {
             });
         }
 
-        if (!process.env.GEMINI_API_KEY) {
+        if (!getAIStatus().configured) {
             return res.status(503).json({
                 success: false,
                 message: 'AI service not configured'
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = `
         Please analyze the following programming question and provide suggestions for improvement:
@@ -309,15 +241,14 @@ export const getQuestionImprovements = async (req, res) => {
         Format your response as constructive feedback that helps the user improve their question.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
+        const response = await generateContent(prompt);
         const improvements = response.text();
 
         res.status(200).json({
             success: true,
             data: {
                 improvements,
-                model: 'gemini-1.5-flash-latest'
+                model: getAIStatus().model
             }
         });
 
@@ -348,12 +279,8 @@ export const createFlowchart = async (req, res) => {
         // Build system prompt that forces only mermaid output
         const systemPrompt = `You are a diagram generator that outputs ONLY Mermaid flowchart code. Start with \"graph LR\" or \"graph TB\". Do not include markdown fences, explanation, or text.`;
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-
         const fullPrompt = `${systemPrompt}\n\nUser prompt: ${prompt}`;
-
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
+        const response = await generateContent(fullPrompt);
         let mermaid = response.text();
 
         // sanitize: strip code fences and surrounding text
@@ -466,14 +393,12 @@ export const getSimilarQuestions = async (req, res) => {
             });
         }
 
-        if (!process.env.GEMINI_API_KEY) {
+        if (!getAIStatus().configured) {
             return res.status(503).json({
                 success: false,
                 message: 'AI service not configured'
             });
         }
-
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = `
         Based on this programming question, generate 3-5 similar question titles that someone might ask:
@@ -485,8 +410,7 @@ export const getSimilarQuestions = async (req, res) => {
         Format as a simple list, one question per line.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
+        const response = await generateContent(prompt);
         const aiResponse = response.text();
 
         // Parse the response to extract similar questions
@@ -500,7 +424,7 @@ export const getSimilarQuestions = async (req, res) => {
             success: true,
             data: {
                 similarQuestions,
-                model: 'gemini-1.5-flash-latest'
+                model: getAIStatus().model
             }
         });
 

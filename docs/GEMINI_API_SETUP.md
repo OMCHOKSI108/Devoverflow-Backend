@@ -4,7 +4,7 @@
 
 Your Gemini API keys are **invalid/expired**. The system shows:
 - ❌ Primary key: "API key not valid"
-- ❌ Backup key: "models/gemini-1.5-flash-latest is not found"
+-- ❌ Backup key: "models/<model> is not found" — check GET /api/ai/status for the model the server is attempting to use, or set GEMINI_MODEL to a supported model name.
 
 ## 🚀 How to Get Valid Gemini API Keys
 
@@ -92,7 +92,8 @@ async function testKeys() {
 
     try {
       const genAI = new GoogleGenerativeAI(key);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+  // The server will attempt the active model reported by GET /api/ai/status or fall back to the first candidate.
+  const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || '<server-chosen-model>' });
       const result = await model.generateContent('Hello');
       console.log(\`✅ \${name} Key: Working!\`);
     } catch (error) {
@@ -135,7 +136,7 @@ With valid keys, you should see:
 4. **Network issues** → Check internet connection
 
 ### Model Information:
-- **Model**: `gemini-1.5-flash-latest`
+- **Model**: reported by the server at GET /api/ai/status (or explicitly set via `GEMINI_MODEL` env var)
 - **Provider**: Google Generative AI
 - **Rate Limits**: 60 requests per minute (free tier)
 

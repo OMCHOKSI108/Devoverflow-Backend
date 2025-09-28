@@ -1,0 +1,329 @@
+{
+    "info": {
+        "name": "DevOverflow Full API - FINAL",
+        "_postman_id": "devoverflow-final-collection",
+        "description": "Full Postman collection for DevOverflow backend: Auth, AI endpoints, QA endpoints. Includes a Login request that extracts JWT into {{jwt_token}} environment variable.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000/api"
+        },
+        {
+            "key": "jwt_token",
+            "value": ""
+        }
+    ],
+    "item": [
+        {
+            "name": "Auth - Register",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"DevOverflow Test\",\n  \"email\": \"test+postman@devoverflow.com\",\n  \"password\": \"testpass123\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/auth/register",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "auth",
+                        "register"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Auth - Login (sets jwt_token)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "const json = pm.response.json();",
+                            "if(json && json.token){",
+                            "  pm.environment.set('jwt_token', json.token);",
+                            "  console.log('Saved jwt_token');",
+                            "} else {",
+                            "  console.warn('Login response did not include token');",
+                            "}"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"email\": \"admin@devoverflow.com\",\n  \"password\": \"admin123\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/auth/login",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "auth",
+                        "login"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Get Status (Public)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/ai/status",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "status"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Similar Questions (Public)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"questionTitle\": \"How to implement authentication in React?\",\n  \"questionBody\": \"Need login/logout flow\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/ai/similar-questions",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "similar-questions"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Answer Suggestion (Protected)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"questionTitle\": \"How to connect MongoDB with Node.js?\",\n  \"questionBody\": \"Steps to establish connection and do CRUD\",\n  \"tags\": [\"nodejs\",\"mongodb\"]\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/ai/answer-suggestion",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "answer-suggestion"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Tag Suggestions (Protected)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"questionTitle\": \"React setState not updating immediately\",\n  \"questionBody\": \"setState shows old value in console.log\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/ai/tag-suggestions",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "tag-suggestions"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Chatbot (Protected)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"message\": \"Hello, my name is Rahul\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/ai/chatbot",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "chatbot"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Question Improvements (Protected)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"questionTitle\": \"help with code\",\n  \"questionBody\": \"my code not working pls fix\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/ai/question-improvements",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "question-improvements"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Create Flowchart (Protected)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"prompt\": \"Create a flowchart for user authentication process\",\n  \"render\": true,\n  \"output\": \"png\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/ai/flowchart",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "flowchart"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Get Flowchart Metadata (Protected)",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/ai/flowchart/{{flow_id}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "flowchart",
+                        "{{flow_id}}"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "AI - Get Flowchart Render Status (Protected)",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/ai/flowchart/{{flow_id}}/render",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "ai",
+                        "flowchart",
+                        "{{flow_id}}",
+                        "render"
+                    ]
+                }
+            }
+        }
+    ]
+}

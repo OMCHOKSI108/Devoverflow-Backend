@@ -195,8 +195,9 @@ export const register = async (req, res) => {
             });
         }
 
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
+        // Hash password (reduce salt rounds for faster hashing)
+        const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 8; // Faster for development/testing
+        const salt = await bcrypt.genSalt(saltRounds);
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Generate verification token
@@ -214,53 +215,53 @@ export const register = async (req, res) => {
             isAdmin: isAdmin === true // Set admin status if provided
         });
 
-        // Send verification email (optional implementation)
-        try {
-            const transporter = createTransporter();
-            const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
+        // Send verification email asynchronously (don't block response)
+        setImmediate(async () => {
+            try {
+                const transporter = createTransporter();
+                const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
 
-            await transporter.sendMail({
-                from: process.env.EMAIL_USER,
-                to: email,
-                subject: 'Verify Your Q&A App Account - Action Required',
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #2563eb;">Welcome to Q&A App! 🚀</h2>
-                        <p>Hi <strong>${username}</strong>,</p>
-                        <p>Thank you for registering with our Q&A App! To complete your registration and start asking/answering questions, please verify your email address.</p>
-                        
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="${verificationUrl}" 
-                               style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                                Verify My Email Address
-                            </a>
+                await transporter.sendMail({
+                    from: process.env.EMAIL_USER,
+                    to: email,
+                    subject: 'Verify Your Q&A App Account - Action Required',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #2563eb;">Welcome to Q&A App! 🚀</h2>
+                            <p>Hi <strong>${username}</strong>,</p>
+                            <p>Thank you for registering with our Q&A App! To complete your registration and start asking/answering questions, please verify your email address.</p>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${verificationUrl}" 
+                                   style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                    Verify My Email Address
+                                </a>
+                            </div>
+                            
+                            <p>Or copy and paste this link in your browser:</p>
+                            <p style="word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 5px;">
+                                ${verificationUrl}
+                            </p>
+                            
+                            <p><strong>Note:</strong> This verification link will expire in 24 hours.</p>
+                            
+                            <hr style="margin: 30px 0;">
+                            <p style="color: #6b7280; font-size: 14px;">
+                                If you didn't create an account with us, please ignore this email.
+                            </p>
+                            <p style="color: #6b7280; font-size: 14px;">
+                                Best regards,<br>
+                                Q&A App Team
+                            </p>
                         </div>
-                        
-                        <p>Or copy and paste this link in your browser:</p>
-                        <p style="word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 5px;">
-                            ${verificationUrl}
-                        </p>
-                        
-                        <p><strong>Note:</strong> This verification link will expire in 24 hours.</p>
-                        
-                        <hr style="margin: 30px 0;">
-                        <p style="color: #6b7280; font-size: 14px;">
-                            If you didn't create an account with us, please ignore this email.
-                        </p>
-                        <p style="color: #6b7280; font-size: 14px;">
-                            Best regards,<br>
-                            Q&A App Team
-                        </p>
-                    </div>
-                `
-            });
-            console.log(`✅ Verification email sent successfully to ${email}`);
-        } catch (emailError) {
-            console.log('Email sending failed:', emailError.message);
-            // Continue with registration even if email fails
-        }
-
-        // Generate JWT token
+                    `
+                });
+                console.log(`✅ Verification email sent successfully to ${email}`);
+            } catch (emailError) {
+                console.log('Email sending failed:', emailError.message);
+                // Email failure doesn't affect registration success
+            }
+        });        // Generate JWT token
         try {
             const token = generateToken(user._id);
 

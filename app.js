@@ -22,7 +22,11 @@ import usersRoutes from './routes/users.js';
 import bookmarksRoutes from './routes/bookmarks.js';
 import uploadRoutes from './routes/upload.js';
 import adminRoutes from './routes/admin.js';
-import friendsRoutes from './routes/friends.js';
+import gamificationRoutes from './routes/gamification.js';
+import chatRoutes from './routes/chat.js';
+import groupsRoutes from './routes/groups.js';
+import searchRoutes from './routes/search.js';
+import notificationsRoutes from './routes/notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -215,7 +219,38 @@ app.get('/api', (req, res) => {
                     auth: 'Bearer token required'
                 }
             },
-            '👥 Users & Social': {
+            '� Search': {
+                advancedSearch: {
+                    method: 'GET',
+                    url: '/api/search',
+                    description: 'Advanced search with filters and sorting',
+                    auth: 'Bearer token required',
+                    queryParams: {
+                        q: 'Search query (optional)',
+                        tags: 'Comma-separated tags (optional)',
+                        sort: 'Sort by: relevance, newest, votes (default: relevance)',
+                        unanswered: 'true/false - Show only unanswered questions (optional)',
+                        page: 'Page number (default: 1)',
+                        limit: 'Results per page (default: 20)'
+                    }
+                },
+                searchSuggestions: {
+                    method: 'GET',
+                    url: '/api/search/suggestions',
+                    description: 'Get search suggestions and popular tags',
+                    auth: 'Bearer token required',
+                    queryParams: {
+                        q: 'Partial search query for suggestions (optional)'
+                    }
+                },
+                trendingTopics: {
+                    method: 'GET',
+                    url: '/api/search/trending',
+                    description: 'Get trending topics and tags',
+                    auth: 'Bearer token required'
+                }
+            },
+            '�👥 Users & Social': {
                 getUserProfile: {
                     method: 'GET',
                     url: '/api/users/:id',
@@ -326,7 +361,11 @@ app.use('/api/users', usersRoutes);
 app.use('/api/bookmarks', bookmarksRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/friends', friendsRoutes);
+app.use('/api/gamification', gamificationRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/groups', groupsRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

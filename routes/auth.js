@@ -8,7 +8,8 @@ import {
     getMe,
     updateProfile,
     setupAdmin,
-    resendVerification
+    resendVerification,
+    changePassword
 } from '../controllers/authController.js';
 import {
     forgotPassword,
@@ -32,5 +33,6 @@ router.post('/reset-password', passwordResetLimiter, resetPassword);
 // Protected routes
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+router.put('/change-password', protect, changePassword);
 
 export default router;

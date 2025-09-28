@@ -8,6 +8,8 @@ const questionSchema = new mongoose.Schema({
     votes: { type: Number, default: 0 },
     answers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Answer' }],
     comments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Comment' }],
+    group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' },
+    isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
 questionSchema.index({ title: 'text', body: 'text' });

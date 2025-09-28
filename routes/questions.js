@@ -11,6 +11,7 @@ import {
     voteOnQuestion,
     getQuestionsByUser
 } from '../controllers/questionController.js';
+import { createAnswer } from '../controllers/answerController.js';
 
 // Public routes
 router.get('/', getAllQuestions);
@@ -23,5 +24,8 @@ router.post('/', protect, createQuestion);
 router.put('/:id', protect, updateQuestion);
 router.delete('/:id', protect, deleteQuestion);
 router.post('/:id/vote', protect, voteOnQuestion);
+
+// Answers for questions
+router.post('/:questionId/answers', protect, createAnswer);
 
 export default router;

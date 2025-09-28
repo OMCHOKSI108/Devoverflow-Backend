@@ -1,0 +1,747 @@
+# Devoverflow Backend API Endpoints Specification
+# MongoDB + Express.js + Node.js Backend
+# Generated: September 28, 2025
+
+================================================================================
+DEVOVERFLOW BACKEND API SPECIFICATION
+================================================================================
+
+BASE URL: https://api.devoverflow.com/api/v1
+AUTHENTICATION: JWT Bearer Token (except auth endpoints)
+
+================================================================================
+1. AUTHENTICATION & USER MANAGEMENT
+================================================================================
+
+# User Registration
+POST /auth/register
+Body: {
+  "name": "string",
+  "email": "string",
+  "password": "string"
+}
+Response: {
+  "success": true,
+  "message": "User registered successfully",
+  "user": { "id": "string", "name": "string", "email": "string" },
+  "token": "jwt_token"
+}
+
+# User Login
+POST /auth/login
+Body: {
+  "email": "string",
+  "password": "string"
+}
+Response: {
+  "success": true,
+  "message": "Login successful",
+  "user": { "id": "string", "name": "string", "email": "string" },
+  "token": "jwt_token"
+}
+
+# Get Current User Profile
+GET /auth/me
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "user": {
+    "id": "string",
+    "name": "string",
+    "email": "string",
+    "bio": "string",
+    "profileImage": "string",
+    "phone": "string",
+    "createdAt": "date",
+    "reputation": number,
+    "badges": ["string"],
+    "privileges": ["string"]
+  }
+}
+
+# Update User Profile
+PUT /auth/profile
+Headers: Authorization: Bearer <token>
+Body: {
+  "name": "string",
+  "bio": "string",
+  "phone": "string",
+  "profileImage": "string"
+}
+Response: {
+  "success": true,
+  "message": "Profile updated successfully",
+  "user": { "id": "string", "name": "string", "email": "string", ... }
+}
+
+# Change Password
+PUT /auth/change-password
+Headers: Authorization: Bearer <token>
+Body: {
+  "currentPassword": "string",
+  "newPassword": "string"
+}
+Response: {
+  "success": true,
+  "message": "Password changed successfully"
+}
+
+# Get All Users (for friends search)
+GET /users
+Headers: Authorization: Bearer <token>
+Query: ?search=name_or_email&page=1&limit=20
+Response: {
+  "success": true,
+  "users": [
+    {
+      "id": "string",
+      "name": "string",
+      "email": "string",
+      "reputation": number,
+      "badges": ["string"]
+    }
+  ],
+  "pagination": { "page": 1, "limit": 20, "total": 100 }
+}
+
+================================================================================
+2. FRIENDS/SOCIAL FEATURES
+================================================================================
+
+# Get User's Friends
+GET /users/friends
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "friends": [
+    {
+      "id": "string",
+      "name": "string",
+      "email": "string",
+      "reputation": number
+    }
+  ]
+}
+
+# Add Friend
+POST /users/friends/:userId
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Friend added successfully"
+}
+
+# Remove Friend
+DELETE /users/friends/:userId
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Friend removed successfully"
+}
+
+================================================================================
+3. QUESTIONS MANAGEMENT
+================================================================================
+
+# Get All Questions (with pagination and filters)
+GET /questions
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20&sort=newest&tags=flutter,dart&unanswered=false&search=query
+Response: {
+  "success": true,
+  "questions": [
+    {
+      "id": "string",
+      "title": "string",
+      "body": "string",
+      "author": {
+        "id": "string",
+        "name": "string",
+        "email": "string"
+      },
+      "tags": ["string"],
+      "votes": number,
+      "answers": number,
+      "views": number,
+      "isAnswered": boolean,
+      "createdAt": "date",
+      "updatedAt": "date"
+    }
+  ],
+  "pagination": { "page": 1, "limit": 20, "total": 100 }
+}
+
+# Get Single Question with Answers
+GET /questions/:questionId
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "question": {
+    "id": "string",
+    "title": "string",
+    "body": "string",
+    "author": { "id": "string", "name": "string" },
+    "tags": ["string"],
+    "votes": number,
+    "views": number,
+    "answers": [
+      {
+        "id": "string",
+        "body": "string",
+        "author": { "id": "string", "name": "string" },
+        "votes": number,
+        "isAccepted": boolean,
+        "createdAt": "date"
+      }
+    ],
+    "createdAt": "date"
+  }
+}
+
+# Create New Question
+POST /questions
+Headers: Authorization: Bearer <token>
+Body: {
+  "title": "string",
+  "body": "string",
+  "tags": ["string"]
+}
+Response: {
+  "success": true,
+  "message": "Question posted successfully",
+  "question": { "id": "string", "title": "string", ... }
+}
+
+# Update Question
+PUT /questions/:questionId
+Headers: Authorization: Bearer <token>
+Body: {
+  "title": "string",
+  "body": "string",
+  "tags": ["string"]
+}
+Response: {
+  "success": true,
+  "message": "Question updated successfully"
+}
+
+# Delete Question
+DELETE /questions/:questionId
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Question deleted successfully"
+}
+
+# Vote on Question
+POST /questions/:questionId/vote
+Headers: Authorization: Bearer <token>
+Body: {
+  "voteType": "upvote" | "downvote"
+}
+Response: {
+  "success": true,
+  "message": "Vote recorded",
+  "votes": number
+}
+
+================================================================================
+4. ANSWERS MANAGEMENT
+================================================================================
+
+# Post Answer to Question
+POST /questions/:questionId/answers
+Headers: Authorization: Bearer <token>
+Body: {
+  "body": "string"
+}
+Response: {
+  "success": true,
+  "message": "Answer posted successfully",
+  "answer": { "id": "string", "body": "string", ... }
+}
+
+# Update Answer
+PUT /answers/:answerId
+Headers: Authorization: Bearer <token>
+Body: {
+  "body": "string"
+}
+Response: {
+  "success": true,
+  "message": "Answer updated successfully"
+}
+
+# Delete Answer
+DELETE /answers/:answerId
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Answer deleted successfully"
+}
+
+# Accept Answer (Question Author Only)
+PUT /answers/:answerId/accept
+Headers: Authorization: Bearer <token>
+Body: {
+  "accepted": true | false
+}
+Response: {
+  "success": true,
+  "message": "Answer acceptance updated"
+}
+
+# Vote on Answer
+POST /answers/:answerId/vote
+Headers: Authorization: Bearer <token>
+Body: {
+  "voteType": "upvote" | "downvote"
+}
+Response: {
+  "success": true,
+  "message": "Vote recorded",
+  "votes": number
+}
+
+================================================================================
+5. BOOKMARKS MANAGEMENT
+================================================================================
+
+# Get User Bookmarks
+GET /bookmarks
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "bookmarks": [
+    {
+      "id": "string",
+      "title": "string",
+      "excerpt": "string",
+      "link": "string",
+      "createdAt": "date"
+    }
+  ]
+}
+
+# Add Bookmark
+POST /bookmarks
+Headers: Authorization: Bearer <token>
+Body: {
+  "title": "string",
+  "excerpt": "string",
+  "link": "string"
+}
+Response: {
+  "success": true,
+  "message": "Bookmark added successfully",
+  "bookmark": { "id": "string", ... }
+}
+
+# Delete Bookmark
+DELETE /bookmarks/:bookmarkId
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Bookmark removed successfully"
+}
+
+================================================================================
+6. GAMIFICATION SYSTEM
+================================================================================
+
+# Get User Reputation
+GET /gamification/reputation
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "reputation": number,
+  "level": "string",
+  "nextLevelPoints": number
+}
+
+# Get Reputation History
+GET /gamification/reputation/history
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20
+Response: {
+  "success": true,
+  "history": [
+    {
+      "points": number,
+      "reason": "string",
+      "timestamp": "date",
+      "total": number
+    }
+  ]
+}
+
+# Get User Badges
+GET /gamification/badges
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "badges": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "icon": "string",
+      "color": "string",
+      "unlockedAt": "date"
+    }
+  ]
+}
+
+# Get User Privileges
+GET /gamification/privileges
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "privileges": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "icon": "string"
+    }
+  ]
+}
+
+# Get Leaderboard
+GET /gamification/leaderboard
+Headers: Authorization: Bearer <token>
+Query: ?limit=50&period=all_time
+Response: {
+  "success": true,
+  "leaderboard": [
+    {
+      "rank": number,
+      "user": {
+        "id": "string",
+        "name": "string",
+        "reputation": number,
+        "badges": ["string"]
+      }
+    }
+  ]
+}
+
+================================================================================
+7. AI CHAT SYSTEM
+================================================================================
+
+# Get Chat History
+GET /chat/sessions
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=10
+Response: {
+  "success": true,
+  "sessions": [
+    {
+      "id": "string",
+      "title": "string",
+      "lastMessage": "string",
+      "createdAt": "date",
+      "updatedAt": "date",
+      "messageCount": number
+    }
+  ]
+}
+
+# Get Chat Session Messages
+GET /chat/sessions/:sessionId/messages
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "sessionId": "string",
+  "messages": [
+    {
+      "id": "string",
+      "role": "user" | "assistant",
+      "content": "string",
+      "timestamp": "date"
+    }
+  ]
+}
+
+# Create New Chat Session
+POST /chat/sessions
+Headers: Authorization: Bearer <token>
+Body: {
+  "title": "string",
+  "initialMessage": "string"
+}
+Response: {
+  "success": true,
+  "session": {
+    "id": "string",
+    "title": "string",
+    "messages": [...]
+  }
+}
+
+# Send Message to AI
+POST /chat/sessions/:sessionId/messages
+Headers: Authorization: Bearer <token>
+Body: {
+  "message": "string"
+}
+Response: {
+  "success": true,
+  "message": {
+    "id": "string",
+    "role": "user",
+    "content": "string",
+    "timestamp": "date"
+  },
+  "aiResponse": {
+    "id": "string",
+    "role": "assistant",
+    "content": "string",
+    "timestamp": "date"
+  }
+}
+
+# Delete Chat Session
+DELETE /chat/sessions/:sessionId
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Chat session deleted successfully"
+}
+
+================================================================================
+8. GROUPS MANAGEMENT
+================================================================================
+
+# Get All Groups
+GET /groups
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20&search=query
+Response: {
+  "success": true,
+  "groups": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "memberCount": number,
+      "createdBy": { "id": "string", "name": "string" },
+      "createdAt": "date"
+    }
+  ]
+}
+
+# Create Group
+POST /groups
+Headers: Authorization: Bearer <token>
+Body: {
+  "name": "string",
+  "description": "string"
+}
+Response: {
+  "success": true,
+  "message": "Group created successfully",
+  "group": { "id": "string", "name": "string", ... }
+}
+
+# Get Group Details
+GET /groups/:groupId
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "group": {
+    "id": "string",
+    "name": "string",
+    "description": "string",
+    "members": [
+      { "id": "string", "name": "string", "role": "admin" | "member" }
+    ],
+    "questions": [...],
+    "createdAt": "date"
+  }
+}
+
+# Join Group
+POST /groups/:groupId/join
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Joined group successfully"
+}
+
+# Leave Group
+POST /groups/:groupId/leave
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Left group successfully"
+}
+
+# Post Question in Group
+POST /groups/:groupId/questions
+Headers: Authorization: Bearer <token>
+Body: {
+  "title": "string",
+  "body": "string"
+}
+Response: {
+  "success": true,
+  "message": "Question posted in group",
+  "question": { "id": "string", ... }
+}
+
+# Get Group Questions
+GET /groups/:groupId/questions
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20
+Response: {
+  "success": true,
+  "questions": [...]
+}
+
+================================================================================
+9. SEARCH FUNCTIONALITY
+================================================================================
+
+# Advanced Search
+GET /search
+Headers: Authorization: Bearer <token>
+Query: ?q=search_query&tags=flutter,dart&sort=relevance&unanswered=false&page=1&limit=20
+Response: {
+  "success": true,
+  "query": "string",
+  "results": [
+    {
+      "id": "string",
+      "title": "string",
+      "body": "string",
+      "author": { "name": "string" },
+      "tags": ["string"],
+      "votes": number,
+      "answers": number,
+      "relevanceScore": number,
+      "createdAt": "date"
+    }
+  ],
+  "relatedQuestions": [...],
+  "pagination": { "page": 1, "limit": 20, "total": 100 }
+}
+
+# Get Search Suggestions
+GET /search/suggestions
+Headers: Authorization: Bearer <token>
+Query: ?q=partial_query
+Response: {
+  "success": true,
+  "suggestions": ["string"],
+  "popularTags": ["string"]
+}
+
+# Get Trending Topics
+GET /search/trending
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "trending": [
+    { "tag": "string", "questionCount": number }
+  ]
+}
+
+================================================================================
+10. NOTIFICATIONS (Future Enhancement)
+================================================================================
+
+# Get User Notifications
+GET /notifications
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20&unread=true
+Response: {
+  "success": true,
+  "notifications": [
+    {
+      "id": "string",
+      "type": "answer" | "badge" | "mention" | "friend_request",
+      "title": "string",
+      "message": "string",
+      "isRead": boolean,
+      "createdAt": "date",
+      "relatedId": "string"
+    }
+  ]
+}
+
+# Mark Notification as Read
+PUT /notifications/:notificationId/read
+Headers: Authorization: Bearer <token>
+Response: {
+  "success": true,
+  "message": "Notification marked as read"
+}
+
+================================================================================
+DATABASE COLLECTIONS (MongoDB)
+================================================================================
+
+1. users
+   - _id, name, email, password (hashed), bio, profileImage, phone
+   - reputation, badges[], privileges[], createdAt, updatedAt
+
+2. questions
+   - _id, title, body, author (ObjectId ref to users), tags[], votes, views
+   - answers[], isAnswered, createdAt, updatedAt
+
+3. answers
+   - _id, body, author (ObjectId), questionId (ObjectId), votes, isAccepted
+   - createdAt, updatedAt
+
+4. bookmarks
+   - _id, userId (ObjectId), title, excerpt, link, createdAt
+
+5. chat_sessions
+   - _id, userId (ObjectId), title, messages[], createdAt, updatedAt
+
+6. groups
+   - _id, name, description, createdBy (ObjectId), members[], createdAt
+
+7. group_questions
+   - _id, groupId (ObjectId), title, body, author (ObjectId), votes, createdAt
+
+8. reputation_history
+   - _id, userId (ObjectId), points, reason, total, timestamp
+
+9. notifications
+   - _id, userId (ObjectId), type, title, message, isRead, relatedId, createdAt
+
+================================================================================
+MIDDLEWARE REQUIREMENTS
+================================================================================
+
+1. Authentication Middleware (JWT verification)
+2. Authorization Middleware (user permissions)
+3. Rate Limiting (API abuse prevention)
+4. Input Validation (sanitize user inputs)
+5. Error Handling (consistent error responses)
+6. CORS Configuration
+7. File Upload Handling (profile images)
+8. Pagination Middleware
+9. Search/Indexing (Elasticsearch integration for advanced search)
+
+================================================================================
+ADDITIONAL CONSIDERATIONS
+================================================================================
+
+1. **Real-time Features**: Consider Socket.io for live chat and notifications
+2. **File Storage**: AWS S3 or similar for profile images
+3. **Caching**: Redis for frequently accessed data (leaderboard, popular questions)
+4. **Search**: Elasticsearch for advanced search capabilities
+5. **Email Service**: For password reset and notifications
+6. **Monitoring**: Logging and analytics
+7. **Security**: Rate limiting, input sanitization, HTTPS
+8. **Backup**: Regular database backups
+9. **Scaling**: Database indexing, query optimization
+10. **Testing**: Unit tests, integration tests, API documentation
+
+================================================================================
+END OF API SPECIFICATION
+================================================================================

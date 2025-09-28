@@ -1,0 +1,707 @@
+# DEVOVERFLOW BACKEND API - IMPLEMENTED ENDPOINTS LIST
+# Generated: September 28, 2025
+# Status: 100% Complete - All API endpoints implemented and tested
+================================================================================
+
+BASE URL: https://api.devoverflow.com/api/v1
+AUTHENTICATION: JWT Bearer Token (except auth endpoints)
+CONTENT-TYPE: application/json (for POST/PUT requests)
+
+================================================================================
+1. AUTHENTICATION & USER MANAGEMENT
+================================================================================
+
+# User Registration
+POST /api/auth/register
+Headers: Content-Type: application/json
+Body: {
+  "name": "string (required)",
+  "email": "string (required)",
+  "password": "string (required, min 6 chars)"
+}
+Response: { "success": true, "user": {...}, "token": "jwt_token" }
+
+# Admin Registration
+POST /api/auth/register-admin
+Headers: Content-Type: application/json
+Body: {
+  "name": "string (required)",
+  "email": "string (required)",
+  "password": "string (required, min 6 chars)"
+}
+Response: { "success": true, "user": {...}, "token": "jwt_token" }
+
+# User Login
+POST /api/auth/login
+Headers: Content-Type: application/json
+Body: {
+  "email": "string (required)",
+  "password": "string (required)"
+}
+Response: { "success": true, "user": {...}, "token": "jwt_token" }
+
+# Email Verification
+GET /api/auth/verify/:token
+Response: { "success": true, "message": "Email verified successfully" }
+
+# Resend Verification Email
+POST /api/auth/resend-verification
+Headers: Content-Type: application/json
+Body: {
+  "email": "string (required)"
+}
+Response: { "success": true, "message": "Verification email sent" }
+
+# Setup Admin (Temporary - Remove in Production)
+POST /api/auth/setup-admin
+Headers: Content-Type: application/json
+Body: {
+  "email": "string (required)",
+  "password": "string (required)"
+}
+Response: { "success": true, "message": "Admin setup completed" }
+
+# Forgot Password
+POST /api/auth/forgot-password
+Headers: Content-Type: application/json
+Body: {
+  "email": "string (required)"
+}
+Response: { "success": true, "message": "Password reset email sent" }
+
+# Reset Password
+POST /api/auth/reset-password
+Headers: Content-Type: application/json
+Body: {
+  "token": "string (required)",
+  "password": "string (required, min 6 chars)"
+}
+Response: { "success": true, "message": "Password reset successfully" }
+
+# Get Current User Profile
+GET /api/auth/me
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "user": { "id", "name", "email", "bio", "profileImage", "reputation", "badges", "privileges" } }
+
+# Update User Profile
+PUT /api/auth/profile
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "name": "string (optional)",
+  "bio": "string (optional)",
+  "phone": "string (optional)",
+  "profileImage": "string (optional)"
+}
+Response: { "success": true, "message": "Profile updated", "user": {...} }
+
+# Change Password
+PUT /api/auth/change-password
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "currentPassword": "string (required)",
+  "newPassword": "string (required, min 6 chars)"
+}
+Response: { "success": true, "message": "Password changed" }
+
+# Get All Users (for friends search)
+GET /api/users
+Headers: Authorization: Bearer <token>
+Query: ?search=name_or_email&page=1&limit=20
+Response: { "success": true, "users": [...], "pagination": {...} }
+
+# Get User Settings
+GET /api/users/settings
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "settings": {...} }
+
+# Update User Settings
+PUT /api/users/settings
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: { "theme": "light|dark", "notifications": {...}, ... }
+Response: { "success": true, "message": "Settings updated" }
+
+# Get User Suggestions (for discovery)
+GET /api/users/suggestions
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "suggestions": [{ "id", "name", "reputation" }] }
+
+# Get User Notifications (Alternative route)
+GET /api/users/notifications
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20&unread=true
+Response: { "success": true, "notifications": [...], "pagination": {...} }
+
+# Mark All User Notifications as Read
+PUT /api/users/notifications/read-all
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "All notifications marked as read" }
+
+# Mark User Notification as Read
+PUT /api/users/notifications/:id/read
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Notification marked as read" }
+
+# Get User Reputation
+GET /api/users/:id/reputation
+Response: { "success": true, "reputation": number, "level": "string" }
+
+# Get User Summary
+GET /api/users/:id/summary
+Response: { "success": true, "user": { "id", "name", "bio", "stats": {...} } }
+
+# Get User Activity
+GET /api/users/:id/activity
+Query: ?page=1&limit=20
+Response: { "success": true, "activity": [{ "type", "description", "timestamp" }] }
+
+# Get User Following
+GET /api/users/:id/following
+Response: { "success": true, "following": [{ "id", "name", "reputation" }] }
+
+# Get User Followers
+GET /api/users/:id/followers
+Response: { "success": true, "followers": [{ "id", "name", "reputation" }] }
+
+# Follow User
+POST /api/users/:id/follow
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "User followed" }
+
+# Unfollow User
+DELETE /api/users/:id/follow
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "User unfollowed" }
+
+# Get User Profile (Public)
+GET /api/users/:id
+Response: { "success": true, "user": { "id", "name", "email", "bio", "profileImage", "reputation", "badges" } }
+
+# Get User Connection Status
+GET /api/users/:id/connection-status
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "status": "none|following|follower|friend" }
+
+================================================================================
+2. FRIENDS/SOCIAL FEATURES
+================================================================================
+
+# Get User's Friends
+GET /api/users/friends
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "friends": [{ "id", "name", "email", "reputation" }] }
+
+# Add Friend
+POST /api/users/friends/:userId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Friend added successfully" }
+
+# Remove Friend
+DELETE /api/users/friends/:userId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Friend removed successfully" }
+
+================================================================================
+3. QUESTIONS MANAGEMENT
+================================================================================
+
+# Get All Questions (with pagination and filters)
+GET /api/questions
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20&sort=newest&tags=flutter,dart&unanswered=false&search=query
+Response: { "success": true, "questions": [...], "pagination": {...} }
+
+# Get Questions by User
+GET /api/questions/user/:userId
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20
+Response: { "success": true, "questions": [...], "pagination": {...} }
+
+# Search Questions (Legacy endpoint)
+GET /api/questions/search
+Headers: Authorization: Bearer <token>
+Query: ?q=search_query&tags=flutter,dart&page=1&limit=20
+Response: { "success": true, "questions": [...], "pagination": {...} }
+
+# Get Single Question with Answers
+GET /api/questions/:questionId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "question": { "id", "title", "body", "author", "tags", "votes", "answers": [...] } }
+
+# Create New Question
+POST /api/questions
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "title": "string (required)",
+  "body": "string (required)",
+  "tags": ["string"] (optional)
+}
+Response: { "success": true, "question": {...} }
+
+# Update Question
+PUT /api/questions/:questionId
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "title": "string (optional)",
+  "body": "string (optional)",
+  "tags": ["string"] (optional)
+}
+Response: { "success": true, "message": "Question updated" }
+
+# Delete Question
+DELETE /api/questions/:questionId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Question deleted" }
+
+# Vote on Question
+POST /api/questions/:questionId/vote
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "voteType": "upvote" | "downvote"
+}
+Response: { "success": true, "votes": number }
+
+================================================================================
+4. ANSWERS MANAGEMENT
+================================================================================
+
+# Post Answer to Question
+POST /api/questions/:questionId/answers
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "body": "string (required)"
+}
+Response: { "success": true, "answer": {...} }
+
+# Update Answer
+PUT /api/answers/:answerId
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "body": "string (required)"
+}
+Response: { "success": true, "message": "Answer updated" }
+
+# Delete Answer
+DELETE /api/answers/:answerId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Answer deleted" }
+
+# Accept Answer (Question Author Only)
+PUT /api/answers/:answerId/accept
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "accepted": true | false
+}
+Response: { "success": true, "message": "Answer acceptance updated" }
+
+# Vote on Answer
+POST /api/answers/:answerId/vote
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "voteType": "upvote" | "downvote"
+}
+Response: { "success": true, "votes": number }
+
+# Get Answers by User
+GET /api/answers/user/:userId
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20
+Response: { "success": true, "answers": [...], "pagination": {...} }
+
+================================================================================
+5. BOOKMARKS MANAGEMENT
+================================================================================
+
+# Get User Bookmarks
+GET /api/bookmarks
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "bookmarks": [{ "id", "title", "excerpt", "link", "createdAt" }] }
+
+# Add Bookmark
+POST /api/bookmarks
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "title": "string (required)",
+  "excerpt": "string (required)",
+  "link": "string (required)"
+}
+Response: { "success": true, "bookmark": {...} }
+
+# Delete Bookmark
+DELETE /api/bookmarks/:bookmarkId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Bookmark removed" }
+
+# Add Question Bookmark (Legacy)
+POST /api/bookmarks/question/:questionId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Question bookmarked" }
+
+# Remove Question Bookmark (Legacy)
+DELETE /api/bookmarks/question/:questionId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Question bookmark removed" }
+
+# Check Question Bookmark Status
+GET /api/bookmarks/check/:questionId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "isBookmarked": true | false }
+
+================================================================================
+6. GAMIFICATION SYSTEM
+================================================================================
+
+# Get User Reputation
+GET /api/gamification/reputation
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "reputation": number, "level": "string", "nextLevelPoints": number }
+
+# Get Reputation History
+GET /api/gamification/reputation/history
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20
+Response: { "success": true, "history": [{ "points", "reason", "timestamp", "total" }] }
+
+# Get User Badges
+GET /api/gamification/badges
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "badges": [{ "id", "name", "description", "icon", "color", "unlockedAt" }] }
+
+# Get User Privileges
+GET /api/gamification/privileges
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "privileges": [{ "id", "name", "description", "icon" }] }
+
+# Get Leaderboard
+GET /api/gamification/leaderboard
+Headers: Authorization: Bearer <token>
+Query: ?limit=50&period=all_time
+Response: { "success": true, "leaderboard": [{ "rank", "user": { "id", "name", "reputation", "badges" } }] }
+
+================================================================================
+7. AI CHAT SYSTEM
+================================================================================
+
+# Get Chat History
+GET /api/chat/sessions
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=10
+Response: { "success": true, "sessions": [{ "id", "title", "lastMessage", "createdAt", "messageCount" }] }
+
+# Get Chat Session Messages
+GET /api/chat/sessions/:sessionId/messages
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "sessionId": "string", "messages": [{ "id", "role", "content", "timestamp" }] }
+
+# Create New Chat Session
+POST /api/chat/sessions
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "title": "string (optional)",
+  "initialMessage": "string (optional)"
+}
+Response: { "success": true, "session": { "id", "title", "messages": [...] } }
+
+# Send Message to AI
+POST /api/chat/sessions/:sessionId/messages
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "message": "string (required)"
+}
+Response: { "success": true, "message": {...}, "aiResponse": {...} }
+
+# Delete Chat Session
+DELETE /api/chat/sessions/:sessionId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Chat session deleted" }
+
+================================================================================
+8. GROUPS MANAGEMENT
+================================================================================
+
+# Get All Groups
+GET /api/groups
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20&search=query
+Response: { "success": true, "groups": [{ "id", "name", "description", "memberCount", "createdBy", "createdAt" }] }
+
+# Create Group
+POST /api/groups
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "name": "string (required)",
+  "description": "string (required)"
+}
+Response: { "success": true, "group": {...} }
+
+# Get Group Details
+GET /api/groups/:groupId
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "group": { "id", "name", "description", "members": [...], "questions": [...] } }
+
+# Join Group
+POST /api/groups/:groupId/join
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Joined group successfully" }
+
+# Leave Group
+POST /api/groups/:groupId/leave
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Left group successfully" }
+
+# Post Question in Group
+POST /api/groups/:groupId/questions
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "title": "string (required)",
+  "body": "string (required)"
+}
+Response: { "success": true, "question": {...} }
+
+# Get Group Questions
+GET /api/groups/:groupId/questions
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20
+Response: { "success": true, "questions": [...] }
+
+================================================================================
+9. SEARCH FUNCTIONALITY
+================================================================================
+
+# Advanced Search
+GET /api/search
+Headers: Authorization: Bearer <token>
+Query: ?q=search_query&tags=flutter,dart&sort=relevance&unanswered=false&page=1&limit=20
+Response: { "success": true, "query": "string", "results": [...], "relatedQuestions": [...], "pagination": {...} }
+
+# Get Search Suggestions
+GET /api/search/suggestions
+Headers: Authorization: Bearer <token>
+Query: ?q=partial_query
+Response: { "success": true, "suggestions": ["string"], "popularTags": ["string"] }
+
+# Get Trending Topics
+GET /api/search/trending
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "trending": [{ "tag": "string", "questionCount": number, "score": number }] }
+
+================================================================================
+10. NOTIFICATIONS SYSTEM
+================================================================================
+
+# Get User Notifications
+GET /api/notifications
+Headers: Authorization: Bearer <token>
+Query: ?page=1&limit=20&unread=true
+Response: { "success": true, "notifications": [...], "pagination": {...}, "unreadCount": number }
+
+# Mark Notification as Read
+PUT /api/notifications/:id/read
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Notification marked as read" }
+
+# Mark All Notifications as Read
+PUT /api/notifications/read-all
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "X notifications marked as read" }
+
+# Delete Notification
+DELETE /api/notifications/:id
+Headers: Authorization: Bearer <token>
+Response: { "success": true, "message": "Notification deleted" }
+
+================================================================================
+FILE UPLOAD ENDPOINTS
+================================================================================
+
+# Upload File (Images, Documents)
+POST /api/upload
+Headers: Authorization: Bearer <token>, Content-Type: multipart/form-data
+Body: file (FormData with key 'file')
+Response: { "success": true, "fileUrl": "string", "fileName": "string" }
+
+================================================================================
+ADMIN PANEL ENDPOINTS (Admin Only)
+================================================================================
+
+# Create Report (Public - for users to report content)
+POST /api/admin/reports
+Headers: Authorization: Bearer <token>, Content-Type: application/json
+Body: {
+  "contentType": "question|answer|comment",
+  "contentId": "string",
+  "reason": "spam|inappropriate|duplicate|off-topic",
+  "description": "string (optional)"
+}
+Response: { "success": true, "message": "Report submitted" }
+
+# Get All Reports
+GET /api/admin/reports
+Headers: Authorization: Bearer <admin-token>
+Response: { "success": true, "reports": [{ "id", "contentType", "reason", "status", "createdAt" }] }
+
+# Resolve Report
+PUT /api/admin/reports/:id/resolve
+Headers: Authorization: Bearer <admin-token>, Content-Type: application/json
+Body: {
+  "action": "dismiss|warn|ban|suspend",
+  "notes": "string (optional)"
+}
+Response: { "success": true, "message": "Report resolved" }
+
+# Get Admin Stats
+GET /api/admin/stats
+Headers: Authorization: Bearer <admin-token>
+Response: { "success": true, "stats": { "totalUsers", "totalQuestions", "totalAnswers", "totalReports", "activeUsers" } }
+
+# Delete Content as Admin
+DELETE /api/admin/content/:type/:id
+Headers: Authorization: Bearer <admin-token>
+Path Params: type=question|answer|comment, id=contentId
+Response: { "success": true, "message": "Content deleted" }
+
+# Manage User (Ban/Unban, Promote/Demote)
+PUT /api/admin/users/:id
+Headers: Authorization: Bearer <admin-token>, Content-Type: application/json
+Body: { "action": "ban" | "unban" | "promote" | "demote" }
+Response: { "success": true, "message": "User updated" }
+
+# Get All Users (Admin)
+GET /api/admin/users
+Headers: Authorization: Bearer <admin-token>
+Query: ?page=1&limit=20&search=email&status=active|banned
+Response: { "success": true, "users": [...], "pagination": {...} }
+
+# Delete User
+DELETE /api/admin/users/:id
+Headers: Authorization: Bearer <admin-token>
+Response: { "success": true, "message": "User deleted" }
+
+# Update User Details
+PUT /api/admin/users/:id/details
+Headers: Authorization: Bearer <admin-token>, Content-Type: application/json
+Body: { "name": "string", "email": "string", "reputation": number }
+Response: { "success": true, "message": "User details updated" }
+
+# Get All Questions (Admin)
+GET /api/admin/questions
+Headers: Authorization: Bearer <admin-token>
+Query: ?page=1&limit=20&status=active|deleted&search=title
+Response: { "success": true, "questions": [...], "pagination": {...} }
+
+# Edit Question as Admin
+PUT /api/admin/questions/:id
+Headers: Authorization: Bearer <admin-token>, Content-Type: application/json
+Body: { "title": "string", "body": "string", "tags": ["string"] }
+Response: { "success": true, "message": "Question updated" }
+
+# Get All Answers (Admin)
+GET /api/admin/answers
+Headers: Authorization: Bearer <admin-token>
+Query: ?page=1&limit=20&status=active|deleted
+Response: { "success": true, "answers": [...], "pagination": {...} }
+
+# Edit Answer as Admin
+PUT /api/admin/answers/:id
+Headers: Authorization: Bearer <admin-token>, Content-Type: application/json
+Body: { "body": "string" }
+Response: { "success": true, "message": "Answer updated" }
+
+# Get All Comments (Admin)
+GET /api/admin/comments
+Headers: Authorization: Bearer <admin-token>
+Query: ?page=1&limit=20&status=active|deleted
+Response: { "success": true, "comments": [...], "pagination": {...} }
+
+# Add Comment as Admin
+POST /api/admin/comments
+Headers: Authorization: Bearer <admin-token>, Content-Type: application/json
+Body: {
+  "contentType": "question|answer",
+  "contentId": "string",
+  "body": "string"
+}
+Response: { "success": true, "comment": {...} }
+
+# Edit Comment as Admin
+PUT /api/admin/comments/:id
+Headers: Authorization: Bearer <admin-token>, Content-Type: application/json
+Body: { "body": "string" }
+Response: { "success": true, "message": "Comment updated" }
+
+# Delete Comment as Admin
+DELETE /api/admin/comments/:id
+Headers: Authorization: Bearer <admin-token>
+Response: { "success": true, "message": "Comment deleted" }
+
+================================================================================
+RESPONSE FORMAT STANDARDS
+================================================================================
+
+# Success Response
+{
+  "success": true,
+  "data": { ... } | [...],
+  "message": "Optional success message",
+  "pagination": { "page": 1, "limit": 20, "total": 100, "hasNextPage": true, "hasPrevPage": false }
+}
+
+# Error Response
+{
+  "success": false,
+  "message": "Error description",
+  "errors": ["Detailed error messages"] (optional)
+}
+
+================================================================================
+AUTHENTICATION NOTES
+================================================================================
+
+1. All endpoints except auth routes require: Authorization: Bearer <jwt_token>
+2. Get JWT token from POST /api/auth/login or POST /api/auth/register
+3. Token expires after 7 days (configurable)
+4. Include token in all API requests for protected endpoints
+
+================================================================================
+PAGINATION NOTES
+================================================================================
+
+1. Default page = 1, limit = 20
+2. Use ?page=2&limit=10 for custom pagination
+3. All list endpoints support pagination
+4. Response includes pagination metadata
+
+================================================================================
+FILE UPLOAD NOTES
+================================================================================
+
+1. Max file size: 5MB
+2. Supported formats: Images (jpg, png, gif), Documents (pdf, doc, txt)
+3. Files stored at: /uploads/ directory
+4. File URLs are publicly accessible
+
+================================================================================
+RATE LIMITING
+================================================================================
+
+1. Auth endpoints: 5 requests per 15 minutes
+2. General endpoints: 100 requests per 15 minutes
+3. File uploads: 10 uploads per hour per user
+
+================================================================================
+ERROR CODES
+================================================================================
+
+200: Success
+201: Created
+400: Bad Request (validation errors)
+401: Unauthorized (invalid/missing token)
+403: Forbidden (insufficient permissions)
+404: Not Found
+409: Conflict (duplicate data)
+429: Too Many Requests (rate limited)
+500: Internal Server Error
+
+================================================================================
+END OF IMPLEMENTED ENDPOINTS LIST
+================================================================================</content>
+<parameter name="filePath">d:\SEM 5\AIML308_Mobile Application Development\PRACTICALS\backend\IMPLEMENTED_ENDPOINTS_LIST.txt

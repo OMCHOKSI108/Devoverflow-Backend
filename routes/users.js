@@ -20,8 +20,10 @@ import {
     markNotificationAsRead,
     markAllNotificationsAsRead,
     getUserSettings,
-    updateUserSettings
+    updateUserSettings,
+    getUsers
 } from '../controllers/userController.js';
+import { getFriends, addFriend, removeFriend } from '../controllers/friendController.js';
 
 // ============================================================================
 // PUBLIC ROUTES (No authentication required)
@@ -36,6 +38,14 @@ router.get('/search', searchUsers);
 // Current user routes (must be protected and come first)
 router.get('/me', protect, getMyProfile);
 router.put('/profile', protect, updateUserProfile);
+
+// Get all users (for friends search)
+router.get('/', protect, getUsers);
+
+// Friends management
+router.get('/friends', protect, getFriends);
+router.post('/friends/:userId', protect, addFriend);
+router.delete('/friends/:userId', protect, removeFriend);
 
 // User settings
 router.get('/settings', protect, getUserSettings);

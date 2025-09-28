@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     isAdmin: { type: Boolean, default: false },
     reputation: { type: Number, default: 0 },
     badges: [String],
+    privileges: [String],
     bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

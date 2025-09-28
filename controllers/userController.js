@@ -1083,3 +1083,59 @@ export const createNotification = async (recipientId, senderId, type, title, mes
         return null;
     }
 };
+
+// @desc    Get all users with search and pagination
+// @route   GET /api/users
+// @access  Private
+export const getUsers = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const search = req.query.search || '';
+
+        const skip = (page - 1) * limit;
+
+        // Build search query
+        let searchQuery = {};
+        if (search) {
+            searchQuery = {
+                $or: [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } }
+                ]
+            };
+        }
+
+        // Get users with pagination
+        const users = await User.find(searchQuery)
+            .select('name email reputation badges profileImage createdAt')
+            .sort({ reputation: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Get total count for pagination
+        const totalUsers = await User.countDocuments(searchQuery);
+        const totalPages = Math.ceil(totalUsers / limit);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                users,
+                pagination: {
+                    currentPage: page,
+                    totalPages,
+                    totalUsers,
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Get users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};

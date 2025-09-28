@@ -1,7 +1,8 @@
+import Bookmark from '../models/Bookmark.js';
 import User from '../models/User.js';
 import Question from '../models/Question.js';
 
-// @desc    Get user's bookmarked questions
+// @desc    Get user's external bookmarks
 // @route   GET /api/bookmarks
 // @access  Private
 export const getBookmarks = async (req, res) => {
@@ -10,34 +11,18 @@ export const getBookmarks = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const user = await User.findById(req.user.id)
-            .populate({
-                path: 'bookmarks',
-                populate: {
-                    path: 'user',
-                    select: 'username reputation'
-                },
-                options: {
-                    skip: skip,
-                    limit: limit,
-                    sort: { createdAt: -1 }
-                }
-            });
+        const bookmarks = await Bookmark.find({ user: req.user.id })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const totalBookmarks = user.bookmarks.length;
+        const totalBookmarks = await Bookmark.countDocuments({ user: req.user.id });
         const totalPages = Math.ceil(totalBookmarks / limit);
 
         res.status(200).json({
             success: true,
             data: {
-                bookmarks: user.bookmarks,
+                bookmarks,
                 pagination: {
                     currentPage: page,
                     totalPages,
@@ -52,15 +37,88 @@ export const getBookmarks = async (req, res) => {
         console.error('Get bookmarks error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error fetching bookmarks'
+            message: 'Server error'
         });
     }
 };
 
-// @desc    Add a question to bookmarks
-// @route   POST /api/bookmarks/:questionId
+// @desc    Add an external bookmark
+// @route   POST /api/bookmarks
 // @access  Private
 export const addBookmark = async (req, res) => {
+    try {
+        const { title, excerpt, link, tags, isPublic } = req.body;
+
+        // Validate required fields
+        if (!title || !excerpt || !link) {
+            return res.status(400).json({
+                success: false,
+                message: 'Title, excerpt, and link are required'
+            });
+        }
+
+        // Create bookmark
+        const bookmark = await Bookmark.create({
+            user: req.user.id,
+            title: title.trim(),
+            excerpt: excerpt.trim(),
+            link: link.trim(),
+            tags: tags || [],
+            isPublic: isPublic || false
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Bookmark added successfully',
+            data: {
+                bookmark
+            }
+        });
+
+    } catch (error) {
+        console.error('Add bookmark error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+// @desc    Remove an external bookmark
+// @route   DELETE /api/bookmarks/:bookmarkId
+// @access  Private
+export const removeBookmark = async (req, res) => {
+    try {
+        const bookmark = await Bookmark.findOneAndDelete({
+            _id: req.params.bookmarkId,
+            user: req.user.id
+        });
+
+        if (!bookmark) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bookmark not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Bookmark removed successfully'
+        });
+
+    } catch (error) {
+        console.error('Remove bookmark error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+// @desc    Add a question to bookmarks (legacy)
+// @route   POST /api/bookmarks/question/:questionId
+// @access  Private
+export const addQuestionBookmark = async (req, res) => {
     try {
         const { questionId } = req.params;
 
@@ -96,18 +154,18 @@ export const addBookmark = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Add bookmark error:', error);
+        console.error('Add question bookmark error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error adding bookmark'
+            message: 'Server error'
         });
     }
 };
 
-// @desc    Remove a question from bookmarks
-// @route   DELETE /api/bookmarks/:questionId
+// @desc    Remove a question from bookmarks (legacy)
+// @route   DELETE /api/bookmarks/question/:questionId
 // @access  Private
-export const removeBookmark = async (req, res) => {
+export const removeQuestionBookmark = async (req, res) => {
     try {
         const { questionId } = req.params;
 
@@ -137,10 +195,10 @@ export const removeBookmark = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Remove bookmark error:', error);
+        console.error('Remove question bookmark error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error removing bookmark'
+            message: 'Server error'
         });
     }
 };
@@ -167,7 +225,7 @@ export const checkBookmark = async (req, res) => {
         console.error('Check bookmark error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error checking bookmark status'
+            message: 'Server error'
         });
     }
 };

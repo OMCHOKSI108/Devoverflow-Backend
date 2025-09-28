@@ -61,13 +61,12 @@ app.use((req, res, next) => {
     }
 });
 
-// MongoDB Connection with optimized settings
+// MongoDB Connection with optimized settings for Mongoose 8.x
 mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://labworkcharusataiml:54BdZtLCfVjVgesP@cluster0.ivruja7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
     maxPoolSize: 10, // Maintain up to 10 socket connections
     serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
     socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-    bufferCommands: false, // Disable mongoose buffering
-    bufferMaxEntries: 0, // Disable mongoose buffering
+    // Removed invalid options: bufferCommands and bufferMaxEntries
 })
     .then(() => {
         console.log('Connected to MongoDB with optimized connection pooling');

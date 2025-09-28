@@ -14,11 +14,11 @@ const generateToken = (id) => {
     });
 };
 
-// Create email transporter
+// Create email transporter with improved configuration
 export const createTransporter = () => {
     return nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
-        port: process.env.EMAIL_PORT,
+        port: process.env.EMAIL_PORT || 587,
         secure: false, // true for 465, false for other ports
         auth: {
             user: process.env.EMAIL_USER,
@@ -26,9 +26,15 @@ export const createTransporter = () => {
         },
         tls: {
             rejectUnauthorized: false
-        }
-    },
-    )
+        },
+        // Add timeout and connection settings for Render
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 5000, // 5 seconds
+        socketTimeout: 10000, // 10 seconds
+        pool: true, // Use connection pooling
+        maxConnections: 5,
+        maxMessages: 100
+    });
 };
 
 
@@ -217,49 +223,61 @@ export const register = async (req, res) => {
 
         // Send verification email asynchronously (don't block response)
         setImmediate(async () => {
-            try {
-                const transporter = createTransporter();
-                const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
+            let retries = 3;
+            while (retries > 0) {
+                try {
+                    const transporter = createTransporter();
+                    const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
 
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: email,
-                    subject: 'Verify Your Q&A App Account - Action Required',
-                    html: `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                            <h2 style="color: #2563eb;">Welcome to Q&A App! 🚀</h2>
-                            <p>Hi <strong>${username}</strong>,</p>
-                            <p>Thank you for registering with our Q&A App! To complete your registration and start asking/answering questions, please verify your email address.</p>
-                            
-                            <div style="text-align: center; margin: 30px 0;">
-                                <a href="${verificationUrl}" 
-                                   style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                                    Verify My Email Address
-                                </a>
+                    await transporter.sendMail({
+                        from: process.env.EMAIL_USER,
+                        to: email,
+                        subject: 'Verify Your Q&A App Account - Action Required',
+                        html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <h2 style="color: #2563eb;">Welcome to Q&A App! 🚀</h2>
+                                <p>Hi <strong>${username}</strong>,</p>
+                                <p>Thank you for registering with our Q&A App! To complete your registration and start asking/answering questions, please verify your email address.</p>
+
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${verificationUrl}"
+                                       style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                        Verify My Email Address
+                                    </a>
+                                </div>
+
+                                <p>Or copy and paste this link in your browser:</p>
+                                <p style="word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 5px;">
+                                    ${verificationUrl}
+                                </p>
+
+                                <p><strong>Note:</strong> This verification link will expire in 24 hours.</p>
+
+                                <hr style="margin: 30px 0;">
+                                <p style="color: #6b7280; font-size: 14px;">
+                                    If you didn't create an account with us, please ignore this email.
+                                </p>
+                                <p style="color: #6b7280; font-size: 14px;">
+                                    Best regards,<br>
+                                    Q&A App Team
+                                </p>
                             </div>
-                            
-                            <p>Or copy and paste this link in your browser:</p>
-                            <p style="word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 5px;">
-                                ${verificationUrl}
-                            </p>
-                            
-                            <p><strong>Note:</strong> This verification link will expire in 24 hours.</p>
-                            
-                            <hr style="margin: 30px 0;">
-                            <p style="color: #6b7280; font-size: 14px;">
-                                If you didn't create an account with us, please ignore this email.
-                            </p>
-                            <p style="color: #6b7280; font-size: 14px;">
-                                Best regards,<br>
-                                Q&A App Team
-                            </p>
-                        </div>
-                    `
-                });
-                console.log(`✅ Verification email sent successfully to ${email}`);
-            } catch (emailError) {
-                console.log('Email sending failed:', emailError.message);
-                // Email failure doesn't affect registration success
+                        `
+                    });
+                    console.log(`✅ Verification email sent successfully to ${email}`);
+                    break; // Success, exit retry loop
+                } catch (emailError) {
+                    retries--;
+                    console.log(`Email sending failed (${3 - retries}/3 attempts):`, emailError.message);
+
+                    if (retries > 0) {
+                        // Wait before retrying (exponential backoff)
+                        await new Promise(resolve => setTimeout(resolve, (3 - retries) * 2000));
+                    } else {
+                        console.log('❌ All email sending attempts failed for:', email);
+                        // Could implement fallback notification here (e.g., log to database, send to admin, etc.)
+                    }
+                }
             }
         });        // Generate JWT token
         try {

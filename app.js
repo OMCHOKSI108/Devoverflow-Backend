@@ -8,6 +8,12 @@ if (!process.env.JWT_SECRET) {
     process.exit(1);
 }
 
+// Check email configuration (optional but recommended)
+if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('⚠️  Email environment variables not fully configured. Email features may not work.');
+    console.warn('Required: EMAIL_HOST, EMAIL_USER, EMAIL_PASS');
+}
+
 // Log successful environment variable loading
 console.log('Environment variables loaded successfully');
 import mongoose from 'mongoose';
@@ -33,6 +39,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// Trust proxy for rate limiting behind reverse proxy (Render)
+app.set('trust proxy', 1);
 
 // Core Middleware
 app.use(compression()); // Compress responses

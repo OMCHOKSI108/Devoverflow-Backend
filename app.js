@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import compression from 'compression';
 
 // Check required environment variables
 if (!process.env.JWT_SECRET) {
@@ -34,6 +35,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Core Middleware
+app.use(compression()); // Compress responses
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -50,10 +52,16 @@ app.use((req, res, next) => {
     }
 });
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://labworkcharusataiml:54BdZtLCfVjVgesP@cluster0.ivruja7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+// MongoDB Connection with optimized settings
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://labworkcharusataiml:54BdZtLCfVjVgesP@cluster0.ivruja7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+    maxPoolSize: 10, // Maintain up to 10 socket connections
+    serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+    socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+    bufferCommands: false, // Disable mongoose buffering
+    bufferMaxEntries: 0, // Disable mongoose buffering
+})
     .then(() => {
-        console.log('Connected to MongoDB');
+        console.log('Connected to MongoDB with optimized connection pooling');
     })
     .catch((error) => {
         console.error('❌ MongoDB connection error:', error);

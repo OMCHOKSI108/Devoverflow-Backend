@@ -13,5 +13,10 @@ const questionSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 questionSchema.index({ title: 'text', body: 'text' });
+questionSchema.index({ createdAt: -1 });
+questionSchema.index({ votes: -1, createdAt: -1 });
+questionSchema.index({ tags: 1 });
+questionSchema.index({ isActive: 1, createdAt: -1 });
+questionSchema.index({ user: 1, createdAt: -1 });
 
 export default mongoose.model('Question', questionSchema);

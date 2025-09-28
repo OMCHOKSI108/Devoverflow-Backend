@@ -1,6 +1,7 @@
 import Question from '../models/Question.js';
 import User from '../models/User.js';
 import Answer from '../models/Answer.js';
+import cache from '../utils/cache.js';
 
 // @desc    Get all questions with pagination and filtering
 // @route   GET /api/questions
@@ -12,6 +13,14 @@ export const getAllQuestions = async (req, res) => {
         const sortBy = req.query.sortBy || 'createdAt'; // createdAt, votes, answers
         const order = req.query.order === 'asc' ? 1 : -1;
         const tags = req.query.tags ? req.query.tags.split(',') : null;
+
+        // Cache key for popular queries (first page, no filters)
+        const cacheKey = `questions_${page}_${limit}_${sortBy}_${order}_${tags || 'all'}`;
+        const cachedResult = cache.get(cacheKey);
+
+        if (cachedResult && page === 1 && !tags) {
+            return res.status(200).json(cachedResult);
+        }
 
         const skip = (page - 1) * limit;
 
@@ -29,24 +38,64 @@ export const getAllQuestions = async (req, res) => {
             sortOptions[sortBy] = order;
         }
 
-        const questions = await Question.find(query)
-            .populate('user', 'username reputation')
-            .populate({
-                path: 'answers',
-                select: 'user body votes isAccepted createdAt',
-                populate: {
-                    path: 'user',
-                    select: 'username reputation'
+        // Use aggregation for better performance - get both data and count in one query
+        const aggregationPipeline = [
+            { $match: query },
+            {
+                $facet: {
+                    questions: [
+                        { $sort: sortOptions },
+                        { $skip: skip },
+                        { $limit: limit },
+                        {
+                            $lookup: {
+                                from: 'users',
+                                localField: 'user',
+                                foreignField: '_id',
+                                as: 'user',
+                                pipeline: [
+                                    { $project: { username: 1, reputation: 1 } }
+                                ]
+                            }
+                        },
+                        { $unwind: '$user' },
+                        {
+                            $lookup: {
+                                from: 'answers',
+                                localField: 'answers',
+                                foreignField: '_id',
+                                as: 'answers',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: 'users',
+                                            localField: 'user',
+                                            foreignField: '_id',
+                                            as: 'user',
+                                            pipeline: [
+                                                { $project: { username: 1, reputation: 1 } }
+                                            ]
+                                        }
+                                    },
+                                    { $unwind: '$user' },
+                                    { $project: { user: 1, body: 1, votes: 1, isAccepted: 1, createdAt: 1 } }
+                                ]
+                            }
+                        }
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
                 }
-            })
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(limit);
+            }
+        ];
 
-        const totalQuestions = await Question.countDocuments(query);
+        const result = await Question.aggregate(aggregationPipeline);
+        const questions = result[0].questions;
+        const totalQuestions = result[0].totalCount[0]?.count || 0;
         const totalPages = Math.ceil(totalQuestions / limit);
 
-        res.status(200).json({
+        const responseData = {
             success: true,
             data: {
                 questions,
@@ -58,7 +107,14 @@ export const getAllQuestions = async (req, res) => {
                     hasPrevPage: page > 1
                 }
             }
-        });
+        };
+
+        // Cache popular queries for 5 minutes
+        if (page === 1 && !tags) {
+            cache.set(cacheKey, responseData, 5 * 60 * 1000);
+        }
+
+        res.status(200).json(responseData);
 
     } catch (error) {
         console.error('Get questions error:', error);

@@ -18,7 +18,7 @@ export const createAnswer = async (req, res) => {
             });
         }
 
-        // Check if question exists
+        // Check if question exists and create answer atomically
         const question = await Question.findById(questionId);
         if (!question) {
             return res.status(404).json({
@@ -27,16 +27,17 @@ export const createAnswer = async (req, res) => {
             });
         }
 
-        // Create answer
+        // Create answer and update question atomically
         const answer = await Answer.create({
             user: req.user.id,
             question: questionId,
             body: body.trim()
         });
 
-        // Add answer to question's answers array
-        question.answers.push(answer._id);
-        await question.save();
+        // Atomically add answer to question's answers array
+        await Question.findByIdAndUpdate(questionId, {
+            $push: { answers: answer._id }
+        });
 
         // Populate user data
         await answer.populate('user', 'username reputation');

@@ -59,33 +59,61 @@ export const advancedSearch = async (req, res) => {
                 sortOptions = { createdAt: -1 };
         }
 
-        // Execute search
-        const questions = await Question.find(searchQuery)
-            .populate('user', 'username profile.fullName reputation')
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(limitNum)
-            .select('title body tags votes answers createdAt');
+        // Use aggregation for better performance - combine search and count
+        const searchPipeline = [
+            { $match: searchQuery },
+            {
+                $facet: {
+                    questions: [
+                        ...(query.trim() && sort === 'relevance' ? [{ $addFields: { score: { $meta: 'textScore' } } }] : []),
+                        { $sort: sortOptions },
+                        { $skip: skip },
+                        { $limit: limitNum },
+                        {
+                            $lookup: {
+                                from: 'users',
+                                localField: 'user',
+                                foreignField: '_id',
+                                as: 'user',
+                                pipeline: [
+                                    { $project: { username: 1, 'profile.fullName': 1, reputation: 1 } }
+                                ]
+                            }
+                        },
+                        { $unwind: '$user' },
+                        { $project: { title: 1, body: 1, tags: 1, votes: 1, answers: 1, createdAt: 1, user: 1 } }
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ];
 
-        // Get total count for pagination
-        const totalQuestions = await Question.countDocuments(searchQuery);
+        const searchResult = await Question.aggregate(searchPipeline);
+        const questions = searchResult[0].questions;
+        const totalQuestions = searchResult[0].totalCount[0]?.count || 0;
         const totalPages = Math.ceil(totalQuestions / limitNum);
 
-        // Get related questions (similar tags or recent questions)
+        // Get related questions more efficiently (avoid $nin with large arrays)
         let relatedQuestions = [];
-        if (query.trim() || tags) {
-            const relatedQuery = { isActive: true, _id: { $nin: questions.map(q => q._id) } };
+        if (tags && questions.length > 0) {
+            // Only get related questions if we have tags and results
+            const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+            if (tagArray.length > 0) {
+                relatedQuestions = await Question.find({
+                    isActive: true,
+                    tags: { $in: tagArray }
+                })
+                    .populate('user', 'username profile.fullName')
+                    .sort({ votes: -1, createdAt: -1 })
+                    .limit(8) // Get more to filter out current results
+                    .select('title tags votes answers createdAt');
 
-            if (tags) {
-                const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-                relatedQuery.tags = { $in: tagArray };
+                // Filter out questions that are already in results
+                const resultIds = new Set(questions.map(q => q._id.toString()));
+                relatedQuestions = relatedQuestions.filter(q => !resultIds.has(q._id.toString())).slice(0, 5);
             }
-
-            relatedQuestions = await Question.find(relatedQuery)
-                .populate('user', 'username profile.fullName')
-                .sort({ votes: -1, createdAt: -1 })
-                .limit(5)
-                .select('title tags votes answers createdAt');
         }
 
         res.status(200).json({

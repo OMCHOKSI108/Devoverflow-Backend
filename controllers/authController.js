@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import sgMail from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 import User from '../models/User.js';
 
 // Generate JWT Token

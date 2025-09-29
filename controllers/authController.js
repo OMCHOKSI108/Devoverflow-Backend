@@ -14,17 +14,17 @@ const generateToken = (id) => {
     });
 };
 
-// Create nodemailer transporter for Outlook/Hotmail
+// Create nodemailer transporter for Gmail
 export const createTransporter = () => {
     return nodemailer.createTransport({
-        service: 'outlook', // Use Outlook service
+        service: 'gmail', // Use Gmail service
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
         },
-        // Outlook specific settings
+        // Gmail specific settings
         secure: false, // Use TLS
-        port: 587, // Outlook SMTP port
+        port: 587, // Gmail SMTP port
         // Additional settings for better reliability
         connectionTimeout: 60000, // 60 seconds
         greetingTimeout: 30000, // 30 seconds

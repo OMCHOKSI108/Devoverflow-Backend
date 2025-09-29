@@ -14,25 +14,27 @@ const generateToken = (id) => {
     });
 };
 
-// Create nodemailer transporter
+// Create nodemailer transporter for Gmail
 export const createTransporter = () => {
     return nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: process.env.EMAIL_PORT || 587,
-        secure: false,
+        service: 'gmail', // Use Gmail service instead of manual host/port
         auth: {
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
+            pass: process.env.EMAIL_PASS, // This should be an App Password, not regular password
         },
-        tls: {
-            rejectUnauthorized: false
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 5000,
-        socketTimeout: 10000,
+        // Gmail specific settings
+        secure: true, // Use SSL
+        port: 465, // Gmail SSL port
+        // Additional settings for better reliability
+        connectionTimeout: 60000, // 60 seconds
+        greetingTimeout: 30000, // 30 seconds
+        socketTimeout: 60000, // 60 seconds
         pool: true,
-        maxConnections: 5,
-        maxMessages: 100
+        maxConnections: 1, // Reduce connections for Gmail
+        maxMessages: 100,
+        // Debug settings
+        debug: process.env.NODE_ENV === 'development',
+        logger: process.env.NODE_ENV === 'development'
     });
 };
 

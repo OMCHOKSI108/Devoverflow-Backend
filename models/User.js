@@ -38,8 +38,6 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Add indexes for better performance
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
 userSchema.index({ isVerified: 1 });
 userSchema.index({ reputation: -1 });
 userSchema.index({ createdAt: -1 });

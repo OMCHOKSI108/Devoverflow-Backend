@@ -285,14 +285,14 @@ export const register = async (req, res) => {
         const verificationToken = crypto.randomBytes(32).toString('hex');
         const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-        // Create user (AUTO-VERIFIED for testing - remove in production)
+        // Create user
         const user = await User.create({
             username,
             email,
             password: hashedPassword,
             verificationToken,
             verificationTokenExpires,
-            isVerified: true, // TEMPORARILY AUTO-VERIFY ALL USERS
+            isVerified: false, // Email verification required
             isAdmin: isAdmin === true // Set admin status if provided
         });
 

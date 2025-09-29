@@ -158,6 +158,74 @@ export const resendVerification = async (req, res) => {
     }
 };
 
+// @desc    Test email sending
+// @route   POST /api/auth/test-email
+// @access  Public
+export const testEmail = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide an email address'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid email address'
+            });
+        }
+
+        // Create test email content
+        const subject = 'DevOverflow - Email Test';
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333;">DevOverflow Email Test</h2>
+                <p>Hello!</p>
+                <p>This is a test email from DevOverflow backend.</p>
+                <p>If you received this email, it means the email service is working correctly!</p>
+                <br>
+                <p>Best regards,<br>DevOverflow Team</p>
+                <hr style="border: none; border-top: 1px solid #eee;">
+                <p style="font-size: 12px; color: #666;">
+                    This is an automated test email sent at ${new Date().toLocaleString()}
+                </p>
+            </div>
+        `;
+
+        // Attempt to send email
+        const emailSent = await sendEmail(email, subject, html);
+
+        if (emailSent) {
+            res.status(200).json({
+                success: true,
+                message: 'Test email sent successfully!',
+                email: email,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to send test email. Check server logs for details.',
+                email: email
+            });
+        }
+
+    } catch (error) {
+        console.error('Test email error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error during email test',
+            error: error.message
+        });
+    }
+};
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public

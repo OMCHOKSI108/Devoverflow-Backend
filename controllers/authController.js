@@ -14,23 +14,23 @@ const generateToken = (id) => {
     });
 };
 
-// Create nodemailer transporter for Gmail
+// Create nodemailer transporter for Outlook/Hotmail
 export const createTransporter = () => {
     return nodemailer.createTransport({
-        service: 'gmail', // Use Gmail service instead of manual host/port
+        service: 'outlook', // Use Outlook service
         auth: {
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS, // This should be an App Password, not regular password
+            pass: process.env.EMAIL_PASS,
         },
-        // Gmail specific settings
-        secure: true, // Use SSL
-        port: 465, // Gmail SSL port
+        // Outlook specific settings
+        secure: false, // Use TLS
+        port: 587, // Outlook SMTP port
         // Additional settings for better reliability
         connectionTimeout: 60000, // 60 seconds
         greetingTimeout: 30000, // 30 seconds
         socketTimeout: 60000, // 60 seconds
         pool: true,
-        maxConnections: 1, // Reduce connections for Gmail
+        maxConnections: 1,
         maxMessages: 100,
         // Debug settings
         debug: process.env.NODE_ENV === 'development',

@@ -253,13 +253,8 @@ export const register = async (req, res) => {
             let suggestion = '';
 
             if (existingUser.email === email && existingUser.username === username) {
-                if (existingUser.isVerified) {
-                    message = 'Account already exists with this email and username. Please login instead.';
-                    suggestion = 'Try logging in with your existing account.';
-                } else {
-                    message = 'Account already exists but email is not verified.';
-                    suggestion = 'Please check your email for verification link or use the resend verification endpoint.';
-                }
+                message = 'Account already exists with this email and username. Please login instead.';
+                suggestion = 'Try logging in with your existing account.';
             } else if (existingUser.email === email) {
                 message = 'Email already registered';
                 suggestion = 'Try logging in or use a different email address.';
@@ -277,13 +272,7 @@ export const register = async (req, res) => {
                     username: existingUser.username,
                     isVerified: existingUser.isVerified
                 },
-                nextSteps: existingUser.isVerified ?
-                    ['Try logging in with your existing account'] :
-                    [
-                        'Check your email for verification link',
-                        'Use POST /api/auth/resend-verification to resend verification email',
-                        'Try a different username if you want to create a new account'
-                    ]
+                nextSteps: ['Try logging in with your existing account']
             });
         }
 
@@ -296,14 +285,14 @@ export const register = async (req, res) => {
         const verificationToken = crypto.randomBytes(32).toString('hex');
         const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-        // Create user (NOT verified by default, but allow admin registration)
+        // Create user (AUTO-VERIFIED for testing - remove in production)
         const user = await User.create({
             username,
             email,
             password: hashedPassword,
             verificationToken,
             verificationTokenExpires,
-            isVerified: false, // Don't auto-verify
+            isVerified: true, // TEMPORARILY AUTO-VERIFY ALL USERS
             isAdmin: isAdmin === true // Set admin status if provided
         });
 
@@ -371,7 +360,7 @@ export const register = async (req, res) => {
 
             res.status(201).json({
                 success: true,
-                message: 'User registered successfully! Please check your email to verify your account.',
+                message: 'User registered successfully! Your account is auto-verified and ready to use.',
                 data: {
                     token,
                     user: {
@@ -383,8 +372,8 @@ export const register = async (req, res) => {
                         reputation: user.reputation
                     }
                 },
-                emailSent: true,
-                note: 'Please check your email inbox and spam folder for the verification link.'
+                emailSent: false, // No email sent since auto-verified
+                note: 'Account is automatically verified. You can login immediately!'
             });
         } catch (tokenError) {
             // If token generation fails, still send a success response but without token
@@ -401,8 +390,8 @@ export const register = async (req, res) => {
                         reputation: user.reputation
                     }
                 },
-                emailSent: true,
-                note: 'Please check your email inbox and spam folder for the verification link. You will need to log in after verification.'
+                emailSent: false, // No email sent since auto-verified
+                note: 'Account is automatically verified. You can login immediately!'
             });
         }
 

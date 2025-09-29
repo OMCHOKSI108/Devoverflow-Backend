@@ -43,7 +43,7 @@ export const addFriend = async (req, res) => {
             });
         }
 
-        if (user.friends.includes(friendId)) {
+        if (user.friends.some(friend => friend.toString() === friendId)) {
             return res.status(400).json({
                 success: false,
                 message: 'Already friends.'

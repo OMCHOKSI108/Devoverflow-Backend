@@ -1,6 +1,7 @@
 import ChatSession from '../models/ChatSession.js';
 import ChatMessage from '../models/ChatMessage.js';
 import { generateAIResponse } from '../utils/aiService.js';
+import { markdownToHtml } from '../utils/markdown.js';
 
 // @desc    Get user's chat sessions
 // @route   GET /api/chat/sessions
@@ -126,8 +127,9 @@ export const createChatSession = async (req, res) => {
 
             // Get AI response
             const aiResponse = await generateAIResponse(initialMessage);
+            const aiHtml = markdownToHtml(aiResponse);
 
-            // Save AI response
+            // Save AI response (store raw markdown/text)
             const aiMessage = await ChatMessage.create({
                 session: session._id,
                 role: 'assistant',
@@ -220,7 +222,7 @@ export const sendChatMessage = async (req, res) => {
         // Get AI response with conversation context
         const aiResponse = await generateAIResponse(message, conversationHistory);
 
-        // Save AI response
+        // Save AI response (store raw markdown/text)
         const aiMessage = await ChatMessage.create({
             session: sessionId,
             role: 'assistant',
@@ -233,6 +235,8 @@ export const sendChatMessage = async (req, res) => {
             messageCount: session.messageCount + 2,
             updatedAt: new Date()
         });
+
+        const aiHtml = markdownToHtml(aiResponse);
 
         res.status(200).json({
             success: true,
@@ -247,6 +251,7 @@ export const sendChatMessage = async (req, res) => {
                     id: aiMessage._id,
                     role: 'assistant',
                     content: aiMessage.content,
+                    html: aiHtml,
                     timestamp: aiMessage.timestamp
                 }
             }

@@ -2,19 +2,19 @@ import 'dotenv/config';
 import express from 'express';
 import compression from 'compression';
 
-// Check required environment variables
+ 
 if (!process.env.JWT_SECRET) {
     console.error(' JWT_SECRET is not set in environment variables!');
     process.exit(1);
 }
 
-// Check email configuration (optional but recommended)
+ 
 if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('⚠️  Email environment variables not fully configured. Email features may not work.');
+    console.warn(' Email environment variables not fully configured. Email features may not work.');
     console.warn('Required: EMAIL_HOST, EMAIL_USER, EMAIL_PASS');
 }
 
-// Log successful environment variable loading
+ 
 console.log('Environment variables loaded successfully');
 import mongoose from 'mongoose';
 import path from 'path';

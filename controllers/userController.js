@@ -355,7 +355,7 @@ export const followUser = async (req, res) => {
         const currentUser = await User.findById(currentUserId);
 
         // Check if already following
-        if (currentUser.following.includes(id)) {
+        if (currentUser.following.some(followingId => followingId.toString() === id)) {
             return res.status(400).json({
                 success: false,
                 message: 'Already following this user'
@@ -414,7 +414,7 @@ export const unfollowUser = async (req, res) => {
         const currentUser = await User.findById(currentUserId);
 
         // Check if following
-        if (!currentUser.following.includes(id)) {
+        if (!currentUser.following.some(followingId => followingId.toString() === id)) {
             return res.status(400).json({
                 success: false,
                 message: 'Not following this user'
@@ -577,7 +577,7 @@ export const getConnectionStatus = async (req, res) => {
         }
 
         const currentUser = await User.findById(currentUserId).select('following');
-        const isFollowing = currentUser.following.includes(id);
+        const isFollowing = currentUser.following.some(followingId => followingId.toString() === id);
 
         res.status(200).json({
             success: true,

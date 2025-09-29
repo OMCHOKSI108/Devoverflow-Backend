@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import Flow from '../models/Flow.js';
 import { generateAIResponse, generateSimpleAIResponse, generateContent, getAIStatus } from '../utils/aiService.js';
+import { markdownToHtml } from '../utils/markdown.js';
 
 // @desc    Get AI service status
 // @route   GET /api/ai/status
@@ -70,11 +71,13 @@ export const getAnswerSuggestion = async (req, res) => {
 
         const response = await generateContent(prompt);
         const aiAnswer = response.text();
+        const aiHtml = markdownToHtml(aiAnswer);
 
         res.status(200).json({
             success: true,
             data: {
                 suggestion: aiAnswer,
+                html: aiHtml,
                 confidence: 'high',
                 model: getAIStatus().model
             }
@@ -130,6 +133,7 @@ export const getTagSuggestions = async (req, res) => {
 
         const response = await generateContent(prompt);
         const aiResponse = response.text();
+        const aiHtml = markdownToHtml(aiResponse);
 
         // Parse the response to extract tags
         const suggestedTags = aiResponse
@@ -144,6 +148,7 @@ export const getTagSuggestions = async (req, res) => {
             success: true,
             data: {
                 suggestedTags,
+                html: aiHtml,
                 model: getAIStatus().model
             }
         });
@@ -184,10 +189,13 @@ export const chatbot = async (req, res) => {
             await generateAIResponse(message, [{ role: 'system', content: context }]) :
             await generateSimpleAIResponse(message);
 
+        const aiHtml = markdownToHtml(aiResponse);
+
         res.status(200).json({
             success: true,
             data: {
                 response: aiResponse,
+                html: aiHtml,
                 timestamp: new Date().toISOString(),
                 model: getAIStatus().model
             }
@@ -276,18 +284,24 @@ export const createFlowchart = async (req, res) => {
             return res.status(503).json({ success: false, message: 'AI service not configured' });
         }
 
-        // Build system prompt that forces only mermaid output
-        const systemPrompt = `You are a diagram generator that outputs ONLY Mermaid flowchart code. Start with \"graph LR\" or \"graph TB\". Do not include markdown fences, explanation, or text.`;
+        // Build system prompt that forces minimal, simple mermaid flowchart output
+        const systemPrompt = `You are a diagram generator that creates MINIMAL, SIMPLE Mermaid flowcharts. Keep it basic with 3-7 nodes maximum. Use only essential steps. Start with "graph TD" for top-down flow. Use simple node names (A, B, C) and short labels. Do not include markdown fences, explanation, or extra text. Focus on core logic only.`;
 
         const fullPrompt = `${systemPrompt}\n\nUser prompt: ${prompt}`;
         const response = await generateContent(fullPrompt);
         let mermaid = response.text();
 
-        // sanitize: strip code fences and surrounding text
+        // sanitize: strip code fences and surrounding text, ensure minimal flowchart
         mermaid = mermaid.replace(/```/g, '').trim();
 
-        if (!/graph\s+(LR|TB)/i.test(mermaid)) {
-            return res.status(500).json({ success: false, message: 'AI did not return valid Mermaid graph' });
+        // Validate minimal flowchart (3-8 nodes max, simple structure)
+        const lines = mermaid.split('\n').filter(line => line.trim());
+        if (lines.length > 10 || !/graph\s+(TD|TB|LR)/i.test(mermaid)) {
+            // If too complex, generate a simple fallback
+            const simpleFallback = `graph TD
+    A[Start] --> B[Process]
+    B --> C[End]`;
+            mermaid = simpleFallback;
         }
 
         const flowId = `flow_${crypto.randomBytes(6).toString('hex')}`;

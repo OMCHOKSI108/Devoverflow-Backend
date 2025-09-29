@@ -133,7 +133,7 @@ export const addQuestionBookmark = async (req, res) => {
 
         // Check if already bookmarked
         const user = await User.findById(req.user.id);
-        if (user.bookmarks.includes(questionId)) {
+        if (user.bookmarks.some(bookmark => bookmark.toString() === questionId)) {
             return res.status(400).json({
                 success: false,
                 message: 'Question already bookmarked'
@@ -172,7 +172,7 @@ export const removeQuestionBookmark = async (req, res) => {
         const user = await User.findById(req.user.id);
 
         // Check if question is bookmarked
-        if (!user.bookmarks.includes(questionId)) {
+        if (!user.bookmarks.some(bookmark => bookmark.toString() === questionId)) {
             return res.status(400).json({
                 success: false,
                 message: 'Question not in bookmarks'
@@ -211,7 +211,7 @@ export const checkBookmark = async (req, res) => {
         const { questionId } = req.params;
 
         const user = await User.findById(req.user.id);
-        const isBookmarked = user.bookmarks.includes(questionId);
+        const isBookmarked = user.bookmarks.some(bookmark => bookmark.toString() === questionId);
 
         res.status(200).json({
             success: true,

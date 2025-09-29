@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 import User from '../models/User.js';
 
@@ -15,12 +14,7 @@ const generateToken = (id) => {
     });
 };
 
-// Configure SendGrid
-if (process.env.SENDGRID_API_KEY) {
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
-
-// Legacy nodemailer function (kept for backward compatibility)
+// Create nodemailer transporter
 export const createTransporter = () => {
     return nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
@@ -42,42 +36,20 @@ export const createTransporter = () => {
     });
 };
 
-// Send email using SendGrid (preferred) or nodemailer (fallback)
+// Send email using nodemailer
 export const sendEmail = async (to, subject, html) => {
-    // Try SendGrid first if API key is available
-    if (process.env.SENDGRID_API_KEY) {
-        try {
-            const msg = {
-                to,
-                from: {
-                    email: process.env.SENDGRID_FROM_EMAIL || 'noreply@devoverflow.com',
-                    name: 'DevOverflow Team'
-                },
-                subject,
-                html,
-            };
-
-            await sgMail.send(msg);
-            console.log(`✅ Email sent successfully via SendGrid to ${to}`);
-            return true;
-        } catch (sendGridError) {
-            console.log('SendGrid failed, trying nodemailer fallback:', sendGridError.message);
-        }
-    }
-
-    // Fallback to nodemailer if SendGrid fails or is not configured
     try {
         const transporter = createTransporter();
         await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
             to,
             subject,
             html,
         });
         console.log(`✅ Email sent successfully via nodemailer to ${to}`);
         return true;
-    } catch (nodemailerError) {
-        console.log('Nodemailer also failed:', nodemailerError.message);
+    } catch (error) {
+        console.log('Email sending failed:', error.message);
         return false;
     }
 };
